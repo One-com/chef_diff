@@ -1,13 +1,13 @@
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
 # Copyright 2013-present Facebook
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,16 +16,15 @@
 
 require 'spec_helper'
 require 'chef_diff/changes/change'
-require 'chef_diff/changes/cookbook'
-require 'chef_diff/changeset'
+require 'chef_diff/changes/client'
 require 'logger'
 
-describe ChefDiff::Changes::Cookbook do
+describe ChefDiff::Changes::Client do
   let(:logger) do
     Logger.new('/dev/null')
   end
-  let(:cookbook_dirs) do
-    ['cookbooks/one', 'cookbooks/two']
+  let(:clients_dir) do
+    'clients'
   end
 
   fixtures = [
@@ -35,11 +34,11 @@ describe ChefDiff::Changes::Cookbook do
       :result => [],
     },
     {
-      :name => 'modifying of a cookbook',
+      :name => 'delete client',
       :files => [
         {
-          :status => :modified,
-          :path => 'cookbooks/two/cb_one/recipes/test.rb'
+          :status => :deleted,
+          :path => 'clients/test.json'
         },
         {
           :status => :modified,
@@ -47,19 +46,51 @@ describe ChefDiff::Changes::Cookbook do
         },
       ],
       :result => [
-        ['cb_one', :modified],
+        ['test', :deleted],
       ],
     },
     {
-      :name => 'a mix of in-place modifications and deletes',
+      :name => 'delete nested client',
+      :files => [
+        {
+          :status => :deleted,
+          :path => 'clients/cluster/test.json'
+        },
+        {
+          :status => :modified,
+          :path => 'cookbooks/two/cb_one/metadata.rb'
+        },
+      ],
+      :result => [
+        ['cluster/test', :deleted],
+      ],
+    },
+    {
+      :name => 'delete deep nested client',
+      :files => [
+        {
+          :status => :deleted,
+          :path => 'clients/cluster/subsys/test.json'
+        },
+        {
+          :status => :modified,
+          :path => 'cookbooks/two/cb_one/metadata.rb'
+        },
+      ],
+      :result => [
+        ['cluster/subsys/test', :deleted],
+      ],
+    },
+    {
+      :name => 'add/modify a client',
       :files => [
         {
           :status => :modified,
           :path => 'cookbooks/one/cb_one/recipes/test.rb'
         },
         {
-          :status => :deleted,
-          :path => 'cookbooks/one/cb_one/recipes/test2.rb'
+          :status => :modified,
+          :path => 'clients/test.json'
         },
         {
           :status => :modified,
@@ -67,116 +98,56 @@ describe ChefDiff::Changes::Cookbook do
         },
       ],
       :result => [
-        ['cb_one', :modified],
+        ['test', :modified],
       ],
     },
     {
-      :name => 'removing metadata.rb - invalid cookbook, delete it',
+      :name => 'add/modify a nested client',
       :files => [
         {
           :status => :modified,
           :path => 'cookbooks/one/cb_one/recipes/test.rb'
         },
         {
-          :status => :deleted,
-          :path => 'cookbooks/one/cb_one/metadata.rb'
+          :status => :modified,
+          :path => 'clients/cluster/test.json'
+        },
+        {
+          :status => :modified,
+          :path => 'cookbooks/one/cb_one/recipes/test3.rb'
         },
       ],
       :result => [
-        ['cb_one', :deleted],
+        ['cluster/test', :modified],
       ],
     },
     {
-      :name => 'changing cookbook location',
+      :name => 'add/modify a deep nested client',
       :files => [
         {
-          :status => :deleted,
+          :status => :modified,
           :path => 'cookbooks/one/cb_one/recipes/test.rb'
         },
         {
-          :status => :deleted,
-          :path => 'cookbooks/one/cb_one/metadata.rb'
+          :status => :modified,
+          :path => 'clients/cluster/subsys/test.json'
         },
         {
           :status => :modified,
-          :path => 'cookbooks/two/cb_one/recipes/test.rb'
-        },
-        {
-          :status => :modified,
-          :path => 'cookbooks/two/cb_one/recipes/test2.rb'
-        },
-        {
-          :status => :modified,
-          :path => 'cookbooks/two/cb_one/metadata.rb'
+          :path => 'cookbooks/one/cb_one/recipes/test3.rb'
         },
       ],
       :result => [
-        ['cb_one', :deleted],
-        ['cb_one', :modified],
-      ],
-    },
-    {
-      :name => 'modifying metadata only',
-      :files => [
-        {
-          :status => :modified,
-          :path => 'cookbooks/two/cb_one/metadata.rb'
-        },
-      ],
-      :result => [
-        ['cb_one', :modified],
-      ],
-    },
-    {
-      :name => 'modifying README only',
-      :files => [
-        {
-          :status => :modified,
-          :path => 'cookbooks/two/cb_one/README.md'
-        },
-      ],
-      :result => [
-        ['cb_one', :modified],
-      ],
-    },
-    {
-      :name => 'modifying recipe only',
-      :files => [
-        {
-          :status => :modified,
-          :path => 'cookbooks/two/cb_one/recipe/default.rb'
-        },
-      ],
-      :result => [
-        ['cb_one', :modified],
-      ],
-    },
-    {
-      :name => 'skipping non-cookbook files',
-      :files => [
-        {
-          :status => :modified,
-          :path => 'cookbooks/two/OWNERS'
-        },
-        {
-          :status => :modified,
-          :path => 'cookbooks/OWNERS'
-        },
-        {
-          :status => :modified,
-          :path => 'OWNERS'
-        },
-      ],
-      :result => [
+        ['cluster/subsys/test', :modified],
       ],
     },
   ]
 
   fixtures.each do |fixture|
     it "should handle #{fixture[:name]}" do
-      ChefDiff::Changes::Cookbook.find(
+      ChefDiff::Changes::Client.find(
         fixture[:files],
-        cookbook_dirs,
+        clients_dir,
         logger
       ).map do |cb|
         [cb.full_name, cb.status]

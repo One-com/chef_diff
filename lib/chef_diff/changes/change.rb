@@ -28,6 +28,10 @@ module ChefDiff
       @@path = nil
       attr_accessor :name, :status
       def to_s
+        full_name
+      end
+
+      def full_name
         @path.to_s + @name
       end
 

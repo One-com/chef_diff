@@ -78,7 +78,7 @@ describe ChefDiff::Changes::Role do
         roles_dir,
         logger
       ).map do |cb|
-        [cb.name, cb.status]
+        [cb.full_name, cb.status]
       end.
       should eq(fixture[:result])
     end
