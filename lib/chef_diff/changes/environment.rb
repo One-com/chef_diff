@@ -20,19 +20,19 @@ module ChefDiff
     # Changeset aware environment
     class Environment < Change
       def self.name_from_path(path, environment_dir)
-        re = "^#{environment_dir}/([^/]+/)*(.+)\.json"
+        re = "^#{environment_dir}/(([^/]+/)*)(.+)\.json"
         debug("[environment] Matching #{path} against #{re}")
         m = path.match(re)
         if m
-          info("Name is #{m[2]}")
-          return m[2]
+          info("Name is #{m[1]}#{m[3]}")
+          return m[1], m[3]
         end
         nil
       end
 
       def initialize(file, environment_dir)
         @status = file[:status] == :deleted ? :deleted : :modified
-        @name = self.class.name_from_path(file[:path], environment_dir)
+        @path, @name = self.class.name_from_path(file[:path], environment_dir)
       end
 
       # Given a list of changed files

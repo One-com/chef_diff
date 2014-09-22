@@ -36,10 +36,10 @@ module ChefDiff
     def self.get(type, repo_path, logger)
       case type
       when 'svn'
-        require 'between_meals/repo/svn'
+        require 'chef_diff/repo/svn'
         ChefDiff::Repo::Svn.new(repo_path, logger)
       when 'git'
-        require 'between_meals/repo/git'
+        require 'chef_diff/repo/git'
         ChefDiff::Repo::Git.new(repo_path, logger)
       else
         fail "Do not know repo type #{type}"

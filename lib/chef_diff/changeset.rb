@@ -19,6 +19,7 @@ require 'chef_diff/changes/cookbook'
 require 'chef_diff/changes/role'
 require 'chef_diff/changes/node'
 require 'chef_diff/changes/client'
+require 'chef_diff/changes/environment'
 require 'chef_diff/changes/databag'
 
 module ChefDiff

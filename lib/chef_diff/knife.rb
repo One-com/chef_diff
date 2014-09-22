@@ -17,7 +17,7 @@
 require 'json'
 require 'fileutils'
 require 'digest/md5'
-require 'between_meals/util'
+require 'chef_diff/util'
 
 module ChefDiff
   # Knife does not have a usable API for using it as a lib

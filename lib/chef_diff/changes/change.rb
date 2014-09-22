@@ -25,9 +25,10 @@ module ChefDiff
     # Common functionality
     class Change
       @@logger = nil
+      @@path = nil
       attr_accessor :name, :status
       def to_s
-        @name
+        @path.to_s + @name
       end
 
       # People who use us through find() can just pass in logger,

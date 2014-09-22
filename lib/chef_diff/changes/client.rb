@@ -20,19 +20,19 @@ module ChefDiff
     # Changeset aware client
     class Client < Change
       def self.name_from_path(path, client_dir)
-        re = "^#{client_dir}/([^/]+/)*(.+)\.json"
+        re = "^#{client_dir}/(([^/]+/)*)(.+)\.json"
         debug("[client] Matching #{path} against #{re}")
         m = path.match(re)
         if m
-          info("Name is #{m[2]}")
-          return m[2]
+          info("Name is #{m[1]}#{m[3]}")
+          return m[1], m[3]
         end
         nil
       end
 
       def initialize(file, client_dir)
         @status = file[:status] == :deleted ? :deleted : :modified
-        @name = self.class.name_from_path(file[:path], client_dir)
+        @path, @name = self.class.name_from_path(file[:path], client_dir)
       end
 
       # Given a list of changed files
