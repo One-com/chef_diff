@@ -130,7 +130,7 @@ module ChefDiff
         unless @repo.exists?(start_ref)
           fail Changeset::ReferenceError
         end
-        unless end_ref.nil?
+        unless end_ref.nil? or end_ref == 'HEAD'
           unless @repo.exists?(end_ref)
             fail Changeset::ReferenceError
           end

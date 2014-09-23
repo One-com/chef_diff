@@ -4,11 +4,12 @@ Gem::Specification.new do |s|
   s.homepage = 'https://github.com/facebook/between-meals'
   s.platform = Gem::Platform::RUBY
   s.extra_rdoc_files = ['README.md', 'LICENSE']
-  s.summary = 'Between Meals'
+  s.summary = 'Cheff Diff'
   s.description = 'Library for calculation Chef differences between revisions'
-  s.authors = ['Phil Dibowitz', 'Marcin Sawicki']
+  s.authors = ['Esben S. Nielsen']
   s.files = %w{README.md LICENSE} + Dir.glob('lib/chef_diff/*.rb') +
-    Dir.glob('lib/chef_diff/{changes,repo}/*.rb')
+    Dir.glob('lib/chef_diff/{changes,repo}/*.rb') + Dir.glob('bin/*')
+  s.executables = 'chef_diff.rb'
   s.license = 'Apache'
   %w{
     colorize
