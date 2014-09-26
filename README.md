@@ -1,19 +1,14 @@
-# Between Meals
-
-[![Build Status](https://travis-ci.org/facebook/between-meals.svg)](http://travis-ci.org/facebook/between-meals)
+# Chef Diff
 
 ## Intro
-Ohai!
 
-Between Meals is the library for calculating what Chef objects where modified
-between two revisions in a version control system. It is also the library
-that that backs Taste Tester and Grocery Delivery.
+Chef Diff is the library for calculating what Chef objects where modified 
+between two revisions in a version control system. Chef Diff is a derivative/extension 
+of Between Meals from Facebook.
 
-It currently supports SVN and GIT, but plugins can easily be written for
-other systems.
+Chef Diff calculates changes for nodes, clients, users, environments, databags, roles and cookbooks between revisions in a Chef repo.
 
-It also includes some wrappers around knife execution and a few other utility
-functions.
+Chef Diff allows subdirs in nodes, clients and environments to enable the Chef repo layout to match a clustered multi Chef server infrastructure.
 
 ## Dependencies
 
@@ -21,4 +16,3 @@ functions.
 * JSON
 * Mixlib::ShellOut
 * Rugged
-

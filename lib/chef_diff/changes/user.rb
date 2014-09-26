@@ -18,33 +18,33 @@
 # rubocop:disable ClassVars
 module ChefDiff
   module Changes
-    # Changeset aware role
-    class Role < Change
-      def self.name_from_path(path, role_dir)
-        re = "^#{role_dir}\/(.+)\.json"
-        debug("[role] Matching #{path} against #{re}")
+    # Changeset aware user
+    class User < Change
+      def self.name_from_path(path, user_dir)
+        re = "^#{user_dir}/(([^/]+/)*)(.+)\.json"
+        debug("[user] Matching #{path} against #{re}")
         m = path.match(re)
         if m
-          info("Name is #{m[1]}")
-          return m[1]
+          info("Name is #{m[1]}#{m[3]}")
+          return m[1], m[3]
         end
         nil
       end
 
-      def initialize(file, role_dir)
+      def initialize(file, user_dir)
         @status = file[:status] == :deleted ? :deleted : :modified
-        @name = self.class.name_from_path(file[:path], role_dir)
+        @path, @name = self.class.name_from_path(file[:path], user_dir)
       end
 
       # Given a list of changed files
-      # create a list of Role objects
-      def self.find(list, role_dir, logger)
+      # create a list of user objects
+      def self.find(list, user_dir, logger)
         @@logger = logger
         return [] if list.nil? || list.empty?
         list.
-          select { |x| self.name_from_path(x[:path], role_dir) }.
+          select { |x| self.name_from_path(x[:path], user_dir) }.
           map do |x|
-            ChefDiff::Changes::Role.new(x, role_dir)
+            ChefDiff::Changes::User.new(x, user_dir)
           end
       end
     end

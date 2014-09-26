@@ -1,5 +1,6 @@
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
+# Copyright 2013-2014 Facebook
 # Copyright 2014-present One.com
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,15 +17,15 @@
 
 require 'spec_helper'
 require 'chef_diff/changes/change'
-require 'chef_diff/changes/client'
+require 'chef_diff/changes/user'
 require 'logger'
 
-describe ChefDiff::Changes::Client do
+describe ChefDiff::Changes::User do
   let(:logger) do
     Logger.new('/dev/null')
   end
-  let(:clients_dir) do
-    'clients'
+  let(:users_dir) do
+    'users'
   end
 
   fixtures = [
@@ -34,11 +35,11 @@ describe ChefDiff::Changes::Client do
       :result => [],
     },
     {
-      :name => 'delete client',
+      :name => 'delete user',
       :files => [
         {
           :status => :deleted,
-          :path => 'clients/test.json'
+          :path => 'users/test.json'
         },
         {
           :status => :modified,
@@ -50,11 +51,11 @@ describe ChefDiff::Changes::Client do
       ],
     },
     {
-      :name => 'delete nested client',
+      :name => 'delete nested user',
       :files => [
         {
           :status => :deleted,
-          :path => 'clients/cluster/test.json'
+          :path => 'users/cluster/test.json'
         },
         {
           :status => :modified,
@@ -66,11 +67,11 @@ describe ChefDiff::Changes::Client do
       ],
     },
     {
-      :name => 'delete deep nested client',
+      :name => 'delete deep nested user',
       :files => [
         {
           :status => :deleted,
-          :path => 'clients/cluster/subsys/test.json'
+          :path => 'users/cluster/subsys/test.json'
         },
         {
           :status => :modified,
@@ -82,7 +83,7 @@ describe ChefDiff::Changes::Client do
       ],
     },
     {
-      :name => 'add/modify a client',
+      :name => 'add/modify a user',
       :files => [
         {
           :status => :modified,
@@ -90,7 +91,7 @@ describe ChefDiff::Changes::Client do
         },
         {
           :status => :modified,
-          :path => 'clients/test.json'
+          :path => 'users/test.json'
         },
         {
           :status => :modified,
@@ -102,7 +103,7 @@ describe ChefDiff::Changes::Client do
       ],
     },
     {
-      :name => 'add/modify a nested client',
+      :name => 'add/modify a nested user',
       :files => [
         {
           :status => :modified,
@@ -110,7 +111,7 @@ describe ChefDiff::Changes::Client do
         },
         {
           :status => :modified,
-          :path => 'clients/cluster/test.json'
+          :path => 'users/cluster/test.json'
         },
         {
           :status => :modified,
@@ -122,7 +123,7 @@ describe ChefDiff::Changes::Client do
       ],
     },
     {
-      :name => 'add/modify a deep nested client',
+      :name => 'add/modify a deep nested user',
       :files => [
         {
           :status => :modified,
@@ -130,7 +131,7 @@ describe ChefDiff::Changes::Client do
         },
         {
           :status => :modified,
-          :path => 'clients/cluster/subsys/test.json'
+          :path => 'users/cluster/subsys/test.json'
         },
         {
           :status => :modified,
@@ -145,9 +146,9 @@ describe ChefDiff::Changes::Client do
 
   fixtures.each do |fixture|
     it "should handle #{fixture[:name]}" do
-      ChefDiff::Changes::Client.find(
+      ChefDiff::Changes::User.find(
         fixture[:files],
-        clients_dir,
+        users_dir,
         logger
       ).map do |cb|
         [cb.full_name, cb.status]
