@@ -62,5 +62,27 @@ module ChefDiff
         ChefDiff::Changes::Change.debug(msg)
       end
     end
+
+    class ChangeSingleFile < Change
+
+      def initialize(file, dir)
+        @status = file[:status] == :deleted ? :deleted : :modified
+        @name = self.class.name_from_path(file[:path], dir)
+      end
+
+      # Given a list of changed files
+      # create a list of Role objects
+      def self.find_class(list, dir, logger, klass)
+        @@logger = logger
+        return [] if list.nil? || list.empty?
+        list.
+          select { |x| self.name_from_path(x[:path], dir) }.
+          map do |x|
+            klass.new(x, dir)
+          end
+      end
+
+    end
+
   end
 end

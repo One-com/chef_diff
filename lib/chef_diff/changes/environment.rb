@@ -19,34 +19,23 @@
 module ChefDiff
   module Changes
     # Changeset aware environment
-    class Environment < Change
+    class Environment < ChangeSingleFile
       def self.name_from_path(path, environment_dir)
         re = "^#{environment_dir}/(([^/]+/)*)(.+)\.json"
         debug("[environment] Matching #{path} against #{re}")
         m = path.match(re)
         if m
-          info("Name is #{m[1]}#{m[3]}")
-          return m[1], m[3]
+          name = "#{m[1]}#{m[3]}"
+          info("Name is #{name}")
+          return name
         end
         nil
       end
 
-      def initialize(file, environment_dir)
-        @status = file[:status] == :deleted ? :deleted : :modified
-        @path, @name = self.class.name_from_path(file[:path], environment_dir)
+      def self.find(list, environment_dir, logger)
+        self.find_class(list, environment_dir, logger, ChefDiff::Changes::Environment)
       end
 
-      # Given a list of changed files
-      # create a list of environment objects
-      def self.find(list, environment_dir, logger)
-        @@logger = logger
-        return [] if list.nil? || list.empty?
-        list.
-          select { |x| self.name_from_path(x[:path], environment_dir) }.
-          map do |x|
-            ChefDiff::Changes::Environment.new(x, environment_dir)
-          end
-      end
     end
   end
 end

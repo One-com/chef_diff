@@ -19,34 +19,23 @@
 module ChefDiff
   module Changes
     # Changeset aware user
-    class User < Change
+    class User < ChangeSingleFile
+
       def self.name_from_path(path, user_dir)
-        re = "^#{user_dir}/(([^/]+/)*)(.+)\.json"
+        re = "^#{user_dir}\/(.+)\.json"
         debug("[user] Matching #{path} against #{re}")
         m = path.match(re)
         if m
-          info("Name is #{m[1]}#{m[3]}")
-          return m[1], m[3]
+          info("Name is #{m[1]}")
+          return m[1]
         end
         nil
       end
 
-      def initialize(file, user_dir)
-        @status = file[:status] == :deleted ? :deleted : :modified
-        @path, @name = self.class.name_from_path(file[:path], user_dir)
+      def self.find(list, user_dir, logger)
+        self.find_class(list, user_dir, logger, ChefDiff::Changes::User)
       end
 
-      # Given a list of changed files
-      # create a list of user objects
-      def self.find(list, user_dir, logger)
-        @@logger = logger
-        return [] if list.nil? || list.empty?
-        list.
-          select { |x| self.name_from_path(x[:path], user_dir) }.
-          map do |x|
-            ChefDiff::Changes::User.new(x, user_dir)
-          end
-      end
     end
   end
 end

@@ -19,34 +19,23 @@
 module ChefDiff
   module Changes
     # Changeset aware client
-    class Client < Change
+    class Client < ChangeSingleFile
       def self.name_from_path(path, client_dir)
         re = "^#{client_dir}/(([^/]+/)*)(.+)\.json"
         debug("[client] Matching #{path} against #{re}")
         m = path.match(re)
         if m
-          info("Name is #{m[1]}#{m[3]}")
-          return m[1], m[3]
+          name = "#{m[1]}#{m[3]}"
+          info("Name is #{name}")
+          return name
         end
         nil
       end
 
-      def initialize(file, client_dir)
-        @status = file[:status] == :deleted ? :deleted : :modified
-        @path, @name = self.class.name_from_path(file[:path], client_dir)
+      def self.find(list, client_dir, logger)
+        self.find_class(list, client_dir, logger, ChefDiff::Changes::Client)
       end
 
-      # Given a list of changed files
-      # create a list of client objects
-      def self.find(list, client_dir, logger)
-        @@logger = logger
-        return [] if list.nil? || list.empty?
-        list.
-          select { |x| self.name_from_path(x[:path], client_dir) }.
-          map do |x|
-            ChefDiff::Changes::Client.new(x, client_dir)
-          end
-      end
     end
   end
 end

@@ -19,34 +19,24 @@
 module ChefDiff
   module Changes
     # Changeset aware node
-    class Node < Change
+    class Node < ChangeSingleFile
+
       def self.name_from_path(path, node_dir)
         re = "^#{node_dir}/(([^/]+/)*)(.+)\.json"
         debug("[node] Matching #{path} against #{re}")
         m = path.match(re)
         if m
-          info("Name is #{m[1]}#{m[3]}")
-          return m[1], m[3]
+          name = "#{m[1]}#{m[3]}"
+          info("Name is #{name}")
+          return name
         end
         nil
       end
 
-      def initialize(file, node_dir)
-        @status = file[:status] == :deleted ? :deleted : :modified
-        @path, @name = self.class.name_from_path(file[:path], node_dir)
+      def self.find(list, node_dir, logger)
+        self.find_class(list, node_dir, logger, ChefDiff::Changes::Node)
       end
 
-      # Given a list of changed files
-      # create a list of node objects
-      def self.find(list, node_dir, logger)
-        @@logger = logger
-        return [] if list.nil? || list.empty?
-        list.
-          select { |x| self.name_from_path(x[:path], node_dir) }.
-          map do |x|
-            ChefDiff::Changes::Node.new(x, node_dir)
-          end
-      end
     end
   end
 end
