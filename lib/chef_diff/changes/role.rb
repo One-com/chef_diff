@@ -19,17 +19,10 @@
 module ChefDiff
   module Changes
     # Changeset aware role
-    class Role < ChangeSingleFile
+    class Role < ChangeSingleFileFlat
 
       def self.name_from_path(path, role_dir)
-        re = "^#{role_dir}\/(.+)\.json"
-        debug("[role] Matching #{path} against #{re}")
-        m = path.match(re)
-        if m
-          info("Name is #{m[1]}")
-          return m[1]
-        end
-        nil
+        self.name_from_path_type(path, role_dir, 'role')
       end
 
       def self.find(list, role_dir, logger)

@@ -19,18 +19,10 @@
 module ChefDiff
   module Changes
     # Changeset aware node
-    class Node < ChangeSingleFile
+    class Node < ChangeSingleFileNested
 
       def self.name_from_path(path, node_dir)
-        re = "^#{node_dir}/(([^/]+/)*)(.+)\.json"
-        debug("[node] Matching #{path} against #{re}")
-        m = path.match(re)
-        if m
-          name = "#{m[1]}#{m[3]}"
-          info("Name is #{name}")
-          return name
-        end
-        nil
+        self.name_from_path_type(path, node_dir, 'node')
       end
 
       def self.find(list, node_dir, logger)

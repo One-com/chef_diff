@@ -19,17 +19,10 @@
 module ChefDiff
   module Changes
     # Changeset aware client
-    class Client < ChangeSingleFile
+    class Client < ChangeSingleFileNested
+
       def self.name_from_path(path, client_dir)
-        re = "^#{client_dir}/(([^/]+/)*)(.+)\.json"
-        debug("[client] Matching #{path} against #{re}")
-        m = path.match(re)
-        if m
-          name = "#{m[1]}#{m[3]}"
-          info("Name is #{name}")
-          return name
-        end
-        nil
+        self.name_from_path_type(path, client_dir, 'client')
       end
 
       def self.find(list, client_dir, logger)

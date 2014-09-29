@@ -19,17 +19,10 @@
 module ChefDiff
   module Changes
     # Changeset aware environment
-    class Environment < ChangeSingleFile
+    class Environment < ChangeSingleFileNested
+
       def self.name_from_path(path, environment_dir)
-        re = "^#{environment_dir}/(([^/]+/)*)(.+)\.json"
-        debug("[environment] Matching #{path} against #{re}")
-        m = path.match(re)
-        if m
-          name = "#{m[1]}#{m[3]}"
-          info("Name is #{name}")
-          return name
-        end
-        nil
+        self.name_from_path_type(path, environment_dir, 'environment')
       end
 
       def self.find(list, environment_dir, logger)

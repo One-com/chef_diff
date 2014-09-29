@@ -63,6 +63,7 @@ module ChefDiff
       end
     end
 
+    # Common functionality for changes in single json file objects
     class ChangeSingleFile < Change
 
       def initialize(file, dir)
@@ -80,6 +81,39 @@ module ChefDiff
           map do |x|
             klass.new(x, dir)
           end
+      end
+
+    end
+
+    # Changes in flat chef dirs for single files
+    class ChangeSingleFileFlat < ChangeSingleFile
+
+      def self.name_from_path_type(path, dir, chef_type)
+        re = "^#{dir}\/(.+)\.json"
+        debug("[#{chef_type}] Matching #{path} against #{re}")
+        m = path.match(re)
+        if m
+          info("Name is #{m[1]}")
+          return m[1]
+        end
+        nil
+      end
+
+    end
+
+    # Changes in chef dirs allowing sub dirs for single files
+    class ChangeSingleFileNested < ChangeSingleFile
+
+      def self.name_from_path_type(path, dir, chef_type)
+        re = "^#{dir}/(([^/]+/)*)(.+)\.json"
+        debug("[[#{chef_type}] Matching #{path} against #{re}")
+        m = path.match(re)
+        if m
+          name = "#{m[1]}#{m[3]}"
+          info("Name is #{name}")
+          return name
+        end
+        nil
       end
 
     end
