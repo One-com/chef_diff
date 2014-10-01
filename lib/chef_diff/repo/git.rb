@@ -64,7 +64,7 @@ module ChefDiff
 
       def checkout(url)
         s = Mixlib::ShellOut.new(
-          "#{@bin} clone #{url} #{@repo} #{@repo_path}"
+          "#{@bin} clone --depth 1 #{url} #{@repo} #{@repo_path}"
         ).run_command
         s.error!
         @repo = Rugged::Repository.new(File.expand_path(@repo_path))

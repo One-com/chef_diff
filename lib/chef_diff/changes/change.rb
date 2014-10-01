@@ -27,7 +27,9 @@ module ChefDiff
     class Change
       @@logger = nil
       @@path = nil
-      attr_accessor :name, :status
+
+      attr_accessor :path, :name, :status
+
       def to_s
         full_name
       end
@@ -68,7 +70,7 @@ module ChefDiff
 
       def initialize(file, dir)
         @status = file[:status] == :deleted ? :deleted : :modified
-        @name = self.class.name_from_path(file[:path], dir)
+        @path, @name = self.class.name_from_path(file[:path], dir)
       end
 
       # Given a list of changed files
@@ -94,7 +96,7 @@ module ChefDiff
         m = path.match(re)
         if m
           info("Name is #{m[1]}")
-          return m[1]
+          return nil, m[1]
         end
         nil
       end
@@ -109,9 +111,8 @@ module ChefDiff
         debug("[[#{chef_type}] Matching #{path} against #{re}")
         m = path.match(re)
         if m
-          name = "#{m[1]}#{m[3]}"
-          info("Name is #{name}")
-          return name
+          info("Name is #{m[1]}#{m[3]}")
+          return m[1], m[3]
         end
         nil
       end
