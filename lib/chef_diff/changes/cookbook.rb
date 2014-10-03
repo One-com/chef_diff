@@ -20,6 +20,9 @@ module ChefDiff
   module Changes
     # Changeset aware cookbook
     class Cookbook < Change
+
+      attr_accessor :cookbook_dir
+
       def self.meaningful_cookbook_file?(path, cookbook_dirs)
         cookbook_dirs.each do |dir|
           re = %r{^#{dir}/([^/]+)/.*}
@@ -46,10 +49,13 @@ module ChefDiff
 
       def initialize(files, cookbook_dirs)
         @files = files
-        @name = self.class.explode_path(
+        exploded_path = self.class.explode_path(
           files.sample[:path],
           cookbook_dirs
-        )[:name]
+        )
+        @name = exploded_path[:name]
+        @cookbook_dir = exploded_path[:cookbook_dir]
+
         # if metadata.rb is being deleted
         #   cookbook is marked for deletion
         # otherwise it was modified
