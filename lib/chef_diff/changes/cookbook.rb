@@ -1,14 +1,15 @@
+# Encoding: utf-8
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
 # Copyright 2013-2014 Facebook
 # Copyright 2014-present One.com
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +21,6 @@ module ChefDiff
   module Changes
     # Changeset aware cookbook
     class Cookbook < Change
-
       attr_accessor :cookbook_dir
 
       def self.meaningful_cookbook_file?(path, cookbook_dirs)
@@ -41,8 +41,8 @@ module ChefDiff
           next unless m
           info("Cookbook is #{m[1]}")
           return {
-            :cookbook_dir => dir,
-            :name => m[1] }
+            cookbook_dir: dir,
+            name: m[1] }
         end
         nil
       end
@@ -60,10 +60,10 @@ module ChefDiff
         #   cookbook is marked for deletion
         # otherwise it was modified
         #   and will be re-uploaded
-        if files.
-          select { |x| x[:status] == :deleted }.
-          map { |x| x[:path].match(%{.*metadata\.rb$}) }.
-          compact.
+        if files
+          .select { |x| x[:status] == :deleted }
+          .map { |x| x[:path].match(%{.*metadata\.rb$}) }
+          .compact
           any?
           @status = :deleted
         else
@@ -77,24 +77,24 @@ module ChefDiff
         @@logger = logger
         return [] if list.nil? || list.empty?
         # rubocop:disable MultilineBlockChain
-        list.
-          group_by do |x|
+        list
+          .group_by do |x|
           # Group by prefix of cookbok_dir + cookbook_name
           # so that we treat deletes and modifications across
           # two locations separately
-          g = self.explode_path(x[:path], cookbook_dirs)
+          g = explode_path(x[:path], cookbook_dirs)
           g[:cookbook_dir] + '/' + g[:name] if g
-        end.
-        map do |_, change|
+        end
+        .map do |_, change|
           # Confirm we're dealing with a cookbook
           # Changes to OWNERS or other stuff that might end up
           # in [core, other, secure] dirs are ignored
           is_cookbook = change.select do |c|
             self.meaningful_cookbook_file?(c[:path], cookbook_dirs)
           end.any?
-          if is_cookbook
-            ChefDiff::Changes::Cookbook.new(change, cookbook_dirs)
-          end
+            if is_cookbook
+              ChefDiff::Changes::Cookbook.new(change, cookbook_dirs)
+            end
         end.compact
         # rubocop:enable MultilineBlockChain
       end

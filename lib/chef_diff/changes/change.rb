@@ -1,14 +1,15 @@
+# Encoding: utf-8
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
 # Copyright 2013-2014 Facebook
 # Copyright 2014-present One.com
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,15 +46,11 @@ module ChefDiff
       end
 
       def self.info(msg)
-        if @@logger
-          @@logger.info(msg)
-        end
+        @@logger.info(msg) if @@logger
       end
 
       def self.debug(msg)
-        if @@logger
-          @@logger.debug(msg)
-        end
+        @@logger.debug(msg) if @@logger
       end
 
       def info(msg)
@@ -67,7 +64,6 @@ module ChefDiff
 
     # Common functionality for changes in single json file objects
     class ChangeSingleFile < Change
-
       def initialize(file, dir)
         @status = file[:status] == :deleted ? :deleted : :modified
         @path, @name = self.class.name_from_path(file[:path], dir)
@@ -78,18 +74,16 @@ module ChefDiff
       def self.find_class(list, dir, logger, klass)
         @@logger = logger
         return [] if list.nil? || list.empty?
-        list.
-          select { |x| self.name_from_path(x[:path], dir) }.
-          map do |x|
+        list
+          .select { |x| name_from_path(x[:path], dir) }
+          .map do |x|
             klass.new(x, dir)
           end
       end
-
     end
 
     # Changes in flat chef dirs for single files
     class ChangeSingleFileFlat < ChangeSingleFile
-
       def self.name_from_path_type(path, dir, chef_type)
         re = "^#{dir}\/(.+)\.json"
         debug("[#{chef_type}] Matching #{path} against #{re}")
@@ -100,12 +94,10 @@ module ChefDiff
         end
         nil
       end
-
     end
 
     # Changes in chef dirs allowing sub dirs for single files
     class ChangeSingleFileNested < ChangeSingleFile
-
       def self.name_from_path_type(path, dir, chef_type)
         re = "^#{dir}/(([^/]+/)*)(.+)\.json"
         debug("[[#{chef_type}] Matching #{path} against #{re}")
@@ -116,8 +108,6 @@ module ChefDiff
         end
         nil
       end
-
     end
-
   end
 end

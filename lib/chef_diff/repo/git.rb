@@ -1,14 +1,15 @@
+# Encoding: utf-8
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
 # Copyright 2013-2014 Facebook
 # Copyright 2014-present One.com
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,12 +47,7 @@ module ChefDiff
       end
 
       def last_msg=(msg)
-        @repo.head.target.amend(
-          {
-            :message => msg,
-            :update_ref => 'HEAD',
-          }
-        )
+        @repo.head.target.amend(message: msg, update_ref: 'HEAD')
       end
 
       def last_author
@@ -75,7 +71,7 @@ module ChefDiff
         check_refs(start_ref, end_ref)
         s = Mixlib::ShellOut.new(
           "#{@bin} diff --name-status #{start_ref} #{end_ref}",
-          :cwd => File.expand_path(@repo_path)
+          cwd: File.expand_path(@repo_path)
         )
         s.run_command.error!
         begin
@@ -95,7 +91,7 @@ module ChefDiff
 
       def update
         cmd = Mixlib::ShellOut.new(
-          "#{@bin} pull --rebase", :cwd => File.expand_path(@repo_path)
+          "#{@bin} pull --rebase", cwd: File.expand_path(@repo_path)
         )
         cmd.run_command
         if cmd.exitstatus != 0
@@ -108,13 +104,13 @@ module ChefDiff
 
       # Return all files
       def files
-        @repo.index.map { |x| { :path => x[:path], :status => :created } }
+        @repo.index.map { |x| { path: x[:path], status: :created } }
       end
 
       def status
         cmd = Mixlib::ShellOut.new(
           "#{@bin} status --porcelain 2>&1",
-          :cwd => File.expand_path(@repo_path)
+          cwd: File.expand_path(@repo_path)
         )
         cmd.run_command
         if cmd.exitstatus != 0
@@ -128,13 +124,9 @@ module ChefDiff
       private
 
       def check_refs(start_ref, end_ref)
-        unless @repo.exists?(start_ref)
-          fail Changeset::ReferenceError
-        end
-        unless end_ref.nil? or end_ref == 'HEAD'
-          unless @repo.exists?(end_ref)
-            fail Changeset::ReferenceError
-          end
+        fail Changeset::ReferenceError unless @repo.exists?(start_ref)
+        unless end_ref.nil? || end_ref == 'HEAD'
+          fail Changeset::ReferenceError unless @repo.exists?(end_ref)
         end
       end
 
@@ -158,49 +150,49 @@ module ChefDiff
           when /^A\s+(\S+)$/
             # A path
             {
-              :status => :modified,
-              :path => Regexp.last_match(1)
+              status: :modified,
+              path: Regexp.last_match(1)
             }
           when /^C(?:\d*)\s+(\S+)\s+(\S+)/
             # C<numbers> path1 path2
             {
-              :status => :modified,
-              :path => Regexp.last_match(2)
+              status: :modified,
+              path: Regexp.last_match(2)
             }
           when /^D\s+(\S+)$/
             # D path
             {
-              :status => :deleted,
-              :path => Regexp.last_match(1)
+              status: :deleted,
+              path: Regexp.last_match(1)
             }
           when /^M(?:\d*)\s+(\S+)$/
             # M<numbers> path
             {
-              :status => :modified,
-              :path => Regexp.last_match(1)
+              status: :modified,
+              path: Regexp.last_match(1)
             }
           when /^R(?:\d*)\s+(\S+)\s+(\S+)/
             # R<numbers> path1 path2
             [
               {
-                :status => :deleted,
-                :path => Regexp.last_match(1)
+                status: :deleted,
+                path: Regexp.last_match(1)
               },
               {
-                :status => :modified,
-                :path => Regexp.last_match(2)
+                status: :modified,
+                path: Regexp.last_match(2)
               }
             ]
           when /^T\s+(\S+)$/
             # T path
             [
               {
-                :status => :deleted,
-                :path => Regexp.last_match(1)
+                status: :deleted,
+                path: Regexp.last_match(1)
               },
               {
-                :status => :modified,
-                :path => Regexp.last_match(1)
+                status: :modified,
+                path: Regexp.last_match(1)
               }
             ]
           else
@@ -208,8 +200,8 @@ module ChefDiff
           end
         end.flatten.map do |x|
           {
-            :status => x[:status],
-            :path => x[:path].sub("#{@repo_path}/", '')
+            status: x[:status],
+            path: x[:path].sub("#{@repo_path}/", '')
           }
         end
         # rubocop:enable MultilineBlockChain
