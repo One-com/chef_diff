@@ -64,7 +64,7 @@ module ChefDiff
           .select { |x| x[:status] == :deleted }
           .map { |x| x[:path].match(%{.*metadata\.rb$}) }
           .compact
-          any?
+          .any?
           @status = :deleted
         else
           @status = :modified
@@ -92,9 +92,9 @@ module ChefDiff
           is_cookbook = change.select do |c|
             self.meaningful_cookbook_file?(c[:path], cookbook_dirs)
           end.any?
-            if is_cookbook
-              ChefDiff::Changes::Cookbook.new(change, cookbook_dirs)
-            end
+          if is_cookbook
+            ChefDiff::Changes::Cookbook.new(change, cookbook_dirs)
+          end
         end.compact
         # rubocop:enable MultilineBlockChain
       end
