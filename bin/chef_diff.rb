@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/opt/chef/embedded/bin/ruby
 # Encoding: utf-8
 
 # Copyright 2014-present One.com
