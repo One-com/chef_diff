@@ -11,7 +11,6 @@ Gem::Specification.new do |s|
   s.executables = 'chef_diff.rb'
   s.license = 'Apache'
   %w{
-    colorize
     json
     mixlib-shellout
     rugged

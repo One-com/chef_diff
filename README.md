@@ -12,7 +12,6 @@ Chef Diff allows subdirs in nodes, clients and environments to enable the Chef r
 
 ## Dependencies
 
-* Colorize
 * JSON
 * Mixlib::ShellOut
 * Rugged
