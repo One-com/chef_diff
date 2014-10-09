@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.authors = ['Esben S. Nielsen']
   s.files = %w{README.md LICENSE} + Dir.glob('lib/chef_diff/*.rb') +
     Dir.glob('lib/chef_diff/{changes,repo}/*.rb') + Dir.glob('bin/*')
-  s.executables = 'chef_diff.rb'
+  s.executables = 'chef-diff'
   s.license = 'Apache'
   %w{
     json
