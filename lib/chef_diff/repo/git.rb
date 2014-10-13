@@ -16,6 +16,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+require 'zlib' # DRAGONS!
+# BEWARE: rugged by default builds with a zlib without gzip support.
+# Require zlib before rugged to avoid ruby using the crippled zlib in
+# subsequent and unrelated code (like say: failing miserable on gzip'ed
+# http responses)
 require 'rugged'
 require 'mixlib/shellout'
 require 'chef_diff/changeset'
