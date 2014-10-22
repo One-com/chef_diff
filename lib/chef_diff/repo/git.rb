@@ -109,7 +109,9 @@ module ChefDiff
 
       # Return all files
       def files
-        @repo.index.map { |x| { path: x[:path], status: :created } }
+        # Use dev and ino check to handle sparse checkouts
+        existing_files = @repo.index.select { |x| x[:dev] > 0 && x[:ino] > 0 }
+        existing_files.map { |x| { path: x[:path], status: :created } }
       end
 
       def status
