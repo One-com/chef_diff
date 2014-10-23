@@ -80,7 +80,8 @@ module ChefDiff
         )
         s.run_command.error!
         begin
-          parse_status(s.stdout).compact
+          files_changed = parse_status(s.stdout).compact
+          files_changed.reject { |x| skip_marked?(x[:path]) }
         rescue => e
           # We've seen some weird non-reproducible failures here
           @logger.error(
@@ -109,9 +110,8 @@ module ChefDiff
 
       # Return all files
       def files
-        # Use dev and ino check to handle sparse checkouts
-        existing_files = @repo.index.select { |x| x[:dev] > 0 && x[:ino] > 0 }
-        existing_files.map { |x| { path: x[:path], status: :created } }
+        valid_files = @repo.index.select { |x| !skip_marked?(x[:path]) }
+        valid_files.map { |x| { path: x[:path], status: :created } }
       end
 
       def status
@@ -134,6 +134,26 @@ module ChefDiff
         fail Changeset::ReferenceError unless @repo.exists?(start_ref)
         unless end_ref.nil? || end_ref == 'HEAD'
           fail Changeset::ReferenceError unless @repo.exists?(end_ref)
+        end
+      end
+
+      def skip_marked?(filepath)
+        s = Mixlib::ShellOut.new(
+          "#{@bin} ls-files -v #{filepath}",
+          cwd: File.expand_path(@repo_path)
+        )
+        s.run_command.error!
+        begin
+          /^S\s+(\S+)$/.match(s.stdout())
+        rescue => e
+          @logger.error(
+            'Failed to check if file should be skipped.'
+          )
+          @logger.error(e)
+          s.stdout.lines.each do |line|
+            @logger.error(line.strip)
+          end
+          exit(1)
         end
       end
 

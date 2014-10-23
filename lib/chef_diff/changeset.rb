@@ -23,6 +23,7 @@ require 'chef_diff/changes/node'
 require 'chef_diff/changes/client'
 require 'chef_diff/changes/environment'
 require 'chef_diff/changes/databag'
+require 'chef_diff/changes/user'
 
 module ChefDiff
   # Convenience for dealing with changes
@@ -44,6 +45,7 @@ module ChefDiff
       @client_dir = locations[:client_dir]
       @environment_dir = locations[:environment_dir]
       @databag_dir = locations[:databag_dir]
+      @user_dir = locations[:user_dir]
       # Figure out which files changed if refs provided
       # or return all files (full upload) otherwise
       if start_ref
@@ -78,6 +80,10 @@ module ChefDiff
 
     def databags
       ChefDiff::Changes::Databag.find(@files, @databag_dir, @logger)
+    end
+
+    def users
+      ChefDiff::Changes::User.find(@files, @user_dir, @logger)
     end
   end
 end

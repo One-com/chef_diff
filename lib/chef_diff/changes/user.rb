@@ -21,8 +21,8 @@ module ChefDiff
   module Changes
     # Changeset aware user
     class User < ChangeSingleFileFlat
-      def self.name_from_path(path, role_dir)
-        name_from_path_type(path, role_dir, 'user')
+      def self.name_from_path(path, user_dir)
+        name_from_path_type(path, user_dir, 'user')
       end
 
       def self.find(list, user_dir, logger)
