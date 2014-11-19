@@ -109,10 +109,8 @@ module ChefDiff
         stdout = exec_cmd(cmd, 'Failed get git repo files')
         item_list = stdout.split("\n")
         valid_items = item_list.reject { |x| x.start_with?('S') }
-        valid_items.map { |x| x.split.last }
-
-        #valid_files = @repo.index.select { |x| !skip_marked?(x[:path]) }
-        #valid_files.map { |x| { path: x[:path], status: :created } }
+        valid_files = valid_items.map { |x| x.split.last }
+        valid_files.map { |x| { path: x, status: :created } }
       end
 
       def status
