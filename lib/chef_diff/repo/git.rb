@@ -129,6 +129,8 @@ module ChefDiff
         cmd.stdout
       end
 
+      private
+
       def check_refs(start_ref, end_ref)
         fail Changeset::ReferenceError unless ref_exists?(start_ref)
         unless end_ref.nil? || end_ref == 'HEAD'
@@ -154,7 +156,6 @@ module ChefDiff
         cmd.exitstatus == 0
       end
 
-      private
 
       def exec_cmd(cmd, fail_message)
         s.run_command.error!
