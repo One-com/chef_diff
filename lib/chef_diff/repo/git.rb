@@ -16,12 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-require 'zlib' # DRAGONS!
-# BEWARE: rugged by default builds with a zlib without gzip support.
-# Require zlib before rugged to avoid ruby using the crippled zlib in
-# subsequent and unrelated code (like say: failing miserable on gzip'ed
-# http responses)
-require 'rugged'
 require 'mixlib/shellout'
 require 'chef_diff/changeset'
 
@@ -32,7 +26,7 @@ module ChefDiff
     class Git < ChefDiff::Repo
       def setup
         if File.exists?(File.expand_path(@repo_path))
-          @repo = Rugged::Repository.new(File.expand_path(@repo_path))
+          @repo = @repo_path
         else
           @repo = nil
         end
@@ -40,35 +34,33 @@ module ChefDiff
       end
 
       def exists?
-        @repo && !@repo.empty?
+        if !@repo
+          return false
+        else
+          cmd = Mixlib::ShellOut.new(
+          "#{@bin} status",
+          cwd: File.expand_path(@repo_path)
+          )
+          cmd.run_command
+          cmd.exitstatus == 0
+        end
       end
 
       def head_rev
-        @repo.head.target.oid
-      end
-
-      def last_msg
-        @repo.head.target.message
-      end
-
-      def last_msg=(msg)
-        @repo.head.target.amend(message: msg, update_ref: 'HEAD')
-      end
-
-      def last_author
-        @repo.head.target.to_hash[:author]
-      end
-
-      def head_parents
-        @repo.head.target.parents
+        cmd = Mixlib::ShellOut.new(
+          "#{@bin} log -n 1 --pretty=format:'%H'",
+          cwd: File.expand_path(@repo_path)
+        )
+        stdout = exec_cmd(cmd, 'Failed get git repo head ref')
+        stdout.strip
       end
 
       def checkout(url)
         s = Mixlib::ShellOut.new(
-          "#{@bin} clone --depth 1 #{url} #{@repo} #{@repo_path}"
+          "#{@bin} clone --depth 1 #{url} #{@repo_path}"
         ).run_command
         s.error!
-        @repo = Rugged::Repository.new(File.expand_path(@repo_path))
+        @repo = @repo_path
       end
 
       # Return files changed between two revisions
@@ -110,8 +102,17 @@ module ChefDiff
 
       # Return all files
       def files
-        valid_files = @repo.index.select { |x| !skip_marked?(x[:path]) }
-        valid_files.map { |x| { path: x[:path], status: :created } }
+        cmd = Mixlib::ShellOut.new(
+          "#{@bin} ls-files -v .",
+          cwd: File.expand_path(@repo_path)
+        )
+        stdout = exec_cmd(cmd, 'Failed get git repo files')
+        item_list = stdout.split("\n")
+        valid_items = item_list.reject { |x| x.start_with?('S') }
+        valid_items.map { |x| x.split.last }
+
+        #valid_files = @repo.index.select { |x| !skip_marked?(x[:path]) }
+        #valid_files.map { |x| { path: x[:path], status: :created } }
       end
 
       def status
@@ -128,33 +129,45 @@ module ChefDiff
         cmd.stdout
       end
 
-      private
-
       def check_refs(start_ref, end_ref)
-        fail Changeset::ReferenceError unless @repo.exists?(start_ref)
+        fail Changeset::ReferenceError unless ref_exists?(start_ref)
         unless end_ref.nil? || end_ref == 'HEAD'
-          fail Changeset::ReferenceError unless @repo.exists?(end_ref)
+          fail Changeset::ReferenceError unless ref_exists?(end_ref)
         end
       end
 
       def skip_marked?(filepath)
-        s = Mixlib::ShellOut.new(
+        cmd = Mixlib::ShellOut.new(
           "#{@bin} ls-files -v #{filepath}",
           cwd: File.expand_path(@repo_path)
         )
+        stdout = exec_cmd(cmd, 'Failed to check if file should be skipped.')
+        /^S\s+(\S+)$/.match(stdout)
+      end
+
+      def ref_exists?(ref)
+        cmd = Mixlib::ShellOut.new(
+          "#{@bin} cat-file -t  #{ref}",
+          cwd: File.expand_path(@repo_path)
+        )
+        cmd.run_command
+        cmd.exitstatus == 0
+      end
+
+      private
+
+      def exec_cmd(cmd, fail_message)
         s.run_command.error!
-        begin
-          /^S\s+(\S+)$/.match(s.stdout())
-        rescue => e
-          @logger.error(
-            'Failed to check if file should be skipped.'
-          )
-          @logger.error(e)
-          s.stdout.lines.each do |line|
-            @logger.error(line.strip)
-          end
-          exit(1)
+        s.stdout()
+      rescue => e
+        @logger.error(
+          fail_message
+        )
+        @logger.error(e)
+        s.stdout.lines.each do |line|
+          @logger.error(line.strip)
         end
+        fail
       end
 
       def parse_status(changes)
