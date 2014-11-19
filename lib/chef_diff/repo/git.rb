@@ -156,16 +156,15 @@ module ChefDiff
         cmd.exitstatus == 0
       end
 
-
       def exec_cmd(cmd, fail_message)
-        s.run_command.error!
-        s.stdout()
+        cmd.run_command.error!
+        cmd.stdout()
       rescue => e
         @logger.error(
           fail_message
         )
-        @logger.error(e)
-        s.stdout.lines.each do |line|
+        @logger.error(e.to_s)
+        cmd.stdout.lines.each do |line|
           @logger.error(line.strip)
         end
         fail
