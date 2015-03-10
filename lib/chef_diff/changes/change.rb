@@ -85,7 +85,7 @@ module ChefDiff
     # Changes in flat chef dirs for single files
     class ChangeSingleFileFlat < ChangeSingleFile
       def self.name_from_path_type(path, dir, chef_type)
-        re = "^#{dir}\/(.+)\.json"
+        re = "^#{dir}\/(.+)\.json$"
         debug("[#{chef_type}] Matching #{path} against #{re}")
         m = path.match(re)
         if m
@@ -99,7 +99,7 @@ module ChefDiff
     # Changes in chef dirs allowing sub dirs for single files
     class ChangeSingleFileNested < ChangeSingleFile
       def self.name_from_path_type(path, dir, chef_type)
-        re = "^#{dir}/(([^/]+/)*)(.+)\.json"
+        re = "^#{dir}/(([^/]+/)*)(.+)\.json$"
         debug("[[#{chef_type}] Matching #{path} against #{re}")
         m = path.match(re)
         if m

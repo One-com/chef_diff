@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'chef_diff'
-  s.version = '0.2.1'
+  s.version = '0.2.2'
   s.platform = Gem::Platform::RUBY
   s.extra_rdoc_files = ['README.md', 'LICENSE']
   s.summary = 'Chef Diff'
