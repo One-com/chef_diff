@@ -89,11 +89,11 @@ module ChefDiff
 
       def update
         cmd = Mixlib::ShellOut.new(
-          "#{@bin} pull --rebase", cwd: File.expand_path(@repo_path)
+          "#{@bin} pull --rebase 2>&1", cwd: File.expand_path(@repo_path)
         )
         cmd.run_command
         if cmd.exitstatus != 0
-          @logger.error('Something went wrong with git!')
+          @logger.error('Something went wrong with git pull!')
           @logger.error(cmd.stdout)
           fail
         end
@@ -120,7 +120,7 @@ module ChefDiff
         )
         cmd.run_command
         if cmd.exitstatus != 0
-          @logger.error('Something went wrong with git!')
+          @logger.error('Something went wrong with git status!')
           @logger.error(cmd.stdout)
           fail
         end
