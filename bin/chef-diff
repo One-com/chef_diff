@@ -24,7 +24,7 @@ log = Logger.new(STDOUT)
 
 options = { start_ref: nil, end_ref: 'HEAD' }
 optparse = OptionParser.new do |opts|
-  opts.banner = 'Usage: chef_diff.rb [options] <repo_path>'
+  opts.banner = 'Usage: chef-diff [options] <repo_path>'
 
   opts.on('-v', '--verbose', 'Run verbosely') do |v|
 
@@ -69,31 +69,20 @@ changeset = ChefDiff::Changeset.new(log, chef_repo, options[:start_ref],
                                     node_dir: 'nodes',
                                     environment_dir: 'environments',
                                     client_dir: 'clients',
-                                    databag_dir: 'data_bags'
+                                    databag_dir: 'data_bags',
+                                    user_dir: 'users'
                                     )
 
 puts
-puts 'Node changes:'
-puts '-------------'
-puts changeset.nodes
-puts
-
-puts 'client changes:'
-puts '---------------'
-puts changeset.clients
-puts
-
-puts 'Environment changes:'
-puts '--------------------'
-puts changeset.environments
-puts
-
-puts 'Databag changes:'
-puts '----------------'
-puts changeset.databags
-puts
-
-puts 'Cookbook changes:'
-puts '-----------------'
-puts changeset.cookbooks
-puts
+%w(cookbooks roles nodes clients
+   environments databags users).each do |chef_type|
+  changes_found = changeset.public_send(chef_type)
+  unless changes_found.empty?
+    puts '------'
+    puts "#{chef_type.capitalize} changed:"
+    puts '------'
+    puts
+    puts changes_found
+    puts
+  end
+end
