@@ -3,7 +3,7 @@
 ## Intro
 
 Chef Diff is a library for calculating what Chef objects where modified 
-between two revisions in a version control system. Chef Diff is a derivative/extension 
+between two revisions in Chef Git repo. Chef Diff is a derivative/extension 
 of [Between Meals](https://github.com/facebook/between-meals).
 
 Chef Diff calculates changes for nodes, clients, users, environments, databags, roles and cookbooks between revisions in a Chef repo.
