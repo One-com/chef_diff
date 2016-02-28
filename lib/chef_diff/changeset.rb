@@ -19,6 +19,7 @@
 require 'chef_diff/changes/change'
 require 'chef_diff/changes/cookbook'
 require 'chef_diff/changes/role'
+require 'chef_diff/changes/role_local'
 require 'chef_diff/changes/node'
 require 'chef_diff/changes/client'
 require 'chef_diff/changes/environment'
@@ -41,6 +42,7 @@ module ChefDiff
       @repo = repo
       @cookbook_dirs = locations[:cookbook_dirs].dup
       @role_dir = locations[:role_dir]
+      @role_local_dir = locations[:role_local_dir]
       @node_dir = locations[:node_dir]
       @client_dir = locations[:client_dir]
       @environment_dir = locations[:environment_dir]
@@ -64,6 +66,10 @@ module ChefDiff
 
     def roles
       ChefDiff::Changes::Role.find(@files, @role_dir, @logger)
+    end
+
+    def roles_local
+      ChefDiff::Changes::RoleLocal.find(@files, @role_local_dir, @logger)
     end
 
     def nodes

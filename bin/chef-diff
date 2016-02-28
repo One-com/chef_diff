@@ -66,6 +66,7 @@ changeset = ChefDiff::Changeset.new(log, chef_repo, options[:start_ref],
                                     options[:end_ref],
                                     cookbook_dirs: ['cookbooks'],
                                     role_dir: 'roles',
+                                    role_local_dir: 'roles_local',
                                     node_dir: 'nodes',
                                     environment_dir: 'environments',
                                     client_dir: 'clients',
@@ -74,7 +75,7 @@ changeset = ChefDiff::Changeset.new(log, chef_repo, options[:start_ref],
                                     )
 
 puts
-%w(cookbooks roles nodes clients
+%w(cookbooks roles roles_local nodes clients
    environments databags users).each do |chef_type|
   changes_found = changeset.public_send(chef_type)
   unless changes_found.empty?
