@@ -62,7 +62,7 @@ module ChefDiff
         #   and will be re-uploaded
         if files
           .select { |x| x[:status] == :deleted }
-          .map { |x| x[:path].match(%{.*metadata\.rb$}) }
+          .map { |x| x[:path].match(%{.*metadata\.(rb|json)$}) }
           .compact
           .any?
           @status = :deleted
