@@ -38,7 +38,7 @@ module ChefDiff
           return false
         else
           cmd = Mixlib::ShellOut.new(
-          "#{@bin} status",
+          [@bin, 'status'],
           cwd: File.expand_path(@repo_path)
           )
           cmd.run_command
@@ -48,7 +48,7 @@ module ChefDiff
 
       def head_rev
         cmd = Mixlib::ShellOut.new(
-          "#{@bin} log -n 1 --pretty=format:'%H'",
+          [@bin, 'log', '-n', '1', "--pretty=format:'%H'"],
           cwd: File.expand_path(@repo_path)
         )
         stdout = exec_cmd(cmd, 'Failed get git repo head ref')
@@ -57,7 +57,7 @@ module ChefDiff
 
       def checkout(url)
         s = Mixlib::ShellOut.new(
-          "#{@bin} clone --depth 1 #{url} #{@repo_path}"
+          [@bin, 'clone', '--depth', '1', url, @repo_path]
         ).run_command
         s.error!
         @repo = @repo_path
@@ -67,7 +67,7 @@ module ChefDiff
       def changes(start_ref, end_ref)
         check_refs(start_ref, end_ref)
         s = Mixlib::ShellOut.new(
-          "#{@bin} diff --name-status #{start_ref} #{end_ref}",
+          [@bin, 'diff', '--name-status', start_ref, end_ref],
           cwd: File.expand_path(@repo_path)
         )
         s.run_command.error!
@@ -103,7 +103,7 @@ module ChefDiff
       # Return all files
       def files
         cmd = Mixlib::ShellOut.new(
-          "#{@bin} ls-files -v .",
+          [@bin, 'ls-files', '-v', '.'],
           cwd: File.expand_path(@repo_path)
         )
         stdout = exec_cmd(cmd, 'Failed get git repo files')
@@ -138,7 +138,7 @@ module ChefDiff
 
       def skip_marked?(filepath)
         cmd = Mixlib::ShellOut.new(
-          "#{@bin} ls-files -v #{filepath}",
+          [@bin, 'ls-files', '-v', filepath],
           cwd: File.expand_path(@repo_path)
         )
         stdout = exec_cmd(cmd, 'Failed to check if file should be skipped.')
@@ -147,7 +147,7 @@ module ChefDiff
 
       def ref_exists?(ref)
         cmd = Mixlib::ShellOut.new(
-          "#{@bin} cat-file -t  #{ref}",
+          [@bin, 'cat-file', '-t', ref],
           cwd: File.expand_path(@repo_path)
         )
         cmd.run_command
