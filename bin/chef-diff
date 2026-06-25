@@ -1,5 +1,5 @@
-#!/opt/chef/embedded/bin/ruby
-# Encoding: utf-8
+#!/usr/bin/env ruby
+# frozen_string_literal: true
 
 # Copyright 2014-present One.com
 #
@@ -20,20 +20,19 @@ require 'optparse'
 require 'chef_diff/changeset'
 require 'chef_diff/repo'
 
-log = Logger.new(STDOUT)
+log = Logger.new($stdout)
 
 options = { start_ref: nil, end_ref: 'HEAD' }
 optparse = OptionParser.new do |opts|
   opts.banner = 'Usage: chef-diff [options] <repo_path>'
 
-  opts.on('-v', '--verbose', 'Run verbosely') do |v|
-
+  opts.on('-v', '--verbose', 'Run verbosely') do |_v|
     # If -vv is supplied this block is executed twice
-    if options[:verbosity]
-      options[:verbosity] = Logger::DEBUG
-    else
-      options[:verbosity] = Logger::INFO
-    end
+    options[:verbosity] = if options[:verbosity]
+                            Logger::DEBUG
+                          else
+                            Logger::INFO
+                          end
   end
 
   opts.on('-s', '--start_ref REF', 'Git start reference') do |s|
@@ -43,7 +42,6 @@ optparse = OptionParser.new do |opts|
   opts.on('-e', '--end_ref REF', 'Git end reference (default HEAD)') do |e|
     options[:end_ref] = e
   end
-
 end
 
 optparse.parse!
@@ -55,11 +53,7 @@ unless repo_path
   exit(-1)
 end
 
-if options[:verbosity]
-  log.level = options[:verbosity]
-else
-  log.level = Logger::WARN
-end
+log.level = (options[:verbosity] || Logger::WARN)
 
 chef_repo = ChefDiff::Repo.get('git', repo_path, log)
 changeset = ChefDiff::Changeset.new(log, chef_repo, options[:start_ref],
@@ -71,19 +65,18 @@ changeset = ChefDiff::Changeset.new(log, chef_repo, options[:start_ref],
                                     environment_dir: 'environments',
                                     client_dir: 'clients',
                                     databag_dir: 'data_bags',
-                                    user_dir: 'users'
-                                    )
+                                    user_dir: 'users')
 
 puts
-%w(cookbooks roles roles_local nodes clients
-   environments databags users).each do |chef_type|
+%w[cookbooks roles roles_local nodes clients
+   environments databags users].each do |chef_type|
   changes_found = changeset.public_send(chef_type)
-  unless changes_found.empty?
-    puts '------'
-    puts "#{chef_type.capitalize} changed:"
-    puts '------'
-    puts
-    puts changes_found
-    puts
-  end
+  next if changes_found.empty?
+
+  puts '------'
+  puts "#{chef_type.capitalize} changed:"
+  puts '------'
+  puts
+  puts changes_found
+  puts
 end

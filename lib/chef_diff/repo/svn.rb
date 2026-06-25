@@ -1,6 +1,9 @@
+# frozen_string_literal: true
+
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
-# Copyright 2013-present Facebook
+# Copyright 2013-2014 Facebook
+# Copyright 2014-present One.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,8 +31,8 @@ module ChefDiff
       end
 
       def exists?
-        # this shuold be better
-        Dir.exists?(@repo_path)
+        # this should be better
+        Dir.exist?(@repo_path)
       end
 
       def head_rev
@@ -52,27 +55,32 @@ module ChefDiff
 
       def checkout(url)
         s = Mixlib::ShellOut.new(
-          "#{@bin} co --ignore-externals #{url} #{@repo_path}").run_command
+          "#{@bin} co --ignore-externals #{url} #{@repo_path}"
+        ).run_command
         s.error!
       end
 
       # Return files changed between two revisions
+      # Shell-command wrapper; inline parse loop pushes this over the default limit.
+      # rubocop:disable Metrics/MethodLength
       def changes(start_ref, end_ref)
         check_refs(start_ref, end_ref)
         s = Mixlib::ShellOut.new(
-          "#{@bin} diff -r #{start_ref}:#{end_ref} --summarize #{@repo_path}")
+          "#{@bin} diff -r #{start_ref}:#{end_ref} --summarize #{@repo_path}"
+        )
         s.run_command.error!
         @logger.info("Diff between #{start_ref} and #{end_ref}")
         s.stdout.lines.map do |line|
           m = line.match(/^(\w)\w?\s+(\S+)$/)
-          fail "Could not parse line: #{line}" unless m
+          raise "Could not parse line: #{line}" unless m
 
           {
-            :status => m[1] == 'D' ? :deleted : :modified,
-            :path => m[2].sub("#{@repo_path}/", '')
+            status: m[1] == 'D' ? :deleted : :modified,
+            path: m[2].sub("#{@repo_path}/", '')
           }
         end
       end
+      # rubocop:enable Metrics/MethodLength
 
       def update
         cleanup
@@ -86,7 +94,7 @@ module ChefDiff
         s.run_command
         s.error!
         s.stdout.split("\n").map do |x|
-          { :path => x, :status => :created }
+          { path: x, status: :created }
         end
       end
 
@@ -112,24 +120,25 @@ module ChefDiff
         0
       end
 
-      private
-
+      # Two ShellOut calls with optional second-ref branch and rescue block push this over the default limit.
+      # rubocop:disable Metrics/MethodLength
       def check_refs(start_ref, end_ref)
         s = Mixlib::ShellOut.new(
-              "#{@bin} info -r #{start_ref}",
-              :cwd => @repo_path
-            ).run_command
+          "#{@bin} info -r #{start_ref}",
+          cwd: @repo_path
+        ).run_command
         s.error!
         if end_ref
           s = Mixlib::ShellOut.new(
-                "#{@bin} info -r #{end_ref}",
-                :cwd => @repo_path
-              ).run_command
+            "#{@bin} info -r #{end_ref}",
+            cwd: @repo_path
+          ).run_command
           s.error!
         end
-      rescue
+      rescue StandardError
         raise Changeset::ReferenceError
       end
+      # rubocop:enable Metrics/MethodLength
     end
   end
 end

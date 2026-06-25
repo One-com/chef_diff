@@ -1,4 +1,5 @@
-# Encoding: utf-8
+# frozen_string_literal: true
+
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
 # Copyright 2013-2014 Facebook
@@ -16,7 +17,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# rubocop:disable ClassVars
+# @@logger is shared across the whole Change hierarchy; class instance variables are not inherited by subclasses.
+# rubocop:disable Style/ClassVars
 module ChefDiff
   module Changes
     # Changeset aware cookbook
@@ -33,21 +35,29 @@ module ChefDiff
         false
       end
 
+      # Multiple early returns across cookbook_dirs iterations resist clean extraction into a helper.
+      # rubocop:disable Metrics/MethodLength
       def self.explode_path(path, cookbook_dirs)
         cookbook_dirs.each do |dir|
           re = %r{^#{dir}/([^/]+)/.*}
           debug("[cookbook] Matching #{path} against ^#{re}")
           m = path.match(re)
           next unless m
+
           info("Cookbook is #{m[1]}")
           return {
             cookbook_dir: dir,
-            name: m[1] }
+            name: m[1]
+          }
         end
         nil
       end
+      # rubocop:enable Metrics/MethodLength
 
+      # Length reflects field count plus a single status classification; not accidental complexity.
+      # rubocop:disable Metrics/MethodLength
       def initialize(files, cookbook_dirs)
+        super()
         @files = files
         exploded_path = self.class.explode_path(
           files.sample[:path],
@@ -60,44 +70,47 @@ module ChefDiff
         #   cookbook is marked for deletion
         # otherwise it was modified
         #   and will be re-uploaded
-        if files
-          .select { |x| x[:status] == :deleted }
-          .map { |x| x[:path].match(%{.*metadata\.rb$}) }
-          .compact
-          .any?
-          @status = :deleted
-        else
-          @status = :modified
-        end
+        @status = if files
+                     .select { |x| x[:status] == :deleted }
+                     .map { |x| x[:path].match(%(.*metadata.rb$)) }
+                     .compact
+                     .any?
+                    :deleted
+                  else
+                    :modified
+                  end
       end
+      # rubocop:enable Metrics/MethodLength
 
-      # Given a list of changed files
-      # create a list of Cookbook objects
+      # Single group_by+map pipeline; nested conditions cannot be extracted without inverting data flow.
+      # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
       def self.find(list, cookbook_dirs, logger)
         @@logger = logger
         return [] if list.nil? || list.empty?
-        # rubocop:disable MultilineBlockChain
+
+        # Single group_by→map pipeline; an intermediate variable adds noise without clarity.
+        # rubocop:disable Style/MultilineBlockChain
         list
           .group_by do |x|
           # Group by prefix of cookbok_dir + cookbook_name
           # so that we treat deletes and modifications across
           # two locations separately
           g = explode_path(x[:path], cookbook_dirs)
-          g[:cookbook_dir] + '/' + g[:name] if g
+          "#{g[:cookbook_dir]}/#{g[:name]}" if g
         end
-        .map do |_, change|
-          # Confirm we're dealing with a cookbook
-          # Changes to OWNERS or other stuff that might end up
-          # in [core, other, secure] dirs are ignored
-          is_cookbook = change.select do |c|
-            self.meaningful_cookbook_file?(c[:path], cookbook_dirs)
-          end.any?
-          if is_cookbook
-            ChefDiff::Changes::Cookbook.new(change, cookbook_dirs)
-          end
-        end.compact
-        # rubocop:enable MultilineBlockChain
+          .map do |_, change|
+            # Confirm we're dealing with a cookbook
+            # Changes to OWNERS or other stuff that might end up
+            # in [core, other, secure] dirs are ignored
+            is_cookbook = change.any? do |c|
+              meaningful_cookbook_file?(c[:path], cookbook_dirs)
+            end
+            ChefDiff::Changes::Cookbook.new(change, cookbook_dirs) if is_cookbook
+          end.compact
+        # rubocop:enable Style/MultilineBlockChain
       end
+      # rubocop:enable Metrics/MethodLength, Metrics/CyclomaticComplexity
     end
   end
 end
+# rubocop:enable Style/ClassVars

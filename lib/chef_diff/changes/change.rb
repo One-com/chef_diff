@@ -1,4 +1,5 @@
-# Encoding: utf-8
+# frozen_string_literal: true
+
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
 # Copyright 2013-2014 Facebook
@@ -16,7 +17,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# rubocop:disable ClassVars
+# @@logger/@@path shared across the Change hierarchy; class instance variables are not inherited by subclasses.
+# rubocop:disable Style/ClassVars
 module ChefDiff
   # A set of classes that represent a given item's change (a cookbook
   # that's changed, a role that's changed or a databag item that's changed).
@@ -46,11 +48,11 @@ module ChefDiff
       end
 
       def self.info(msg)
-        @@logger.info(msg) if @@logger
+        @@logger&.info(msg)
       end
 
       def self.debug(msg)
-        @@logger.debug(msg) if @@logger
+        @@logger&.debug(msg)
       end
 
       def info(msg)
@@ -65,6 +67,7 @@ module ChefDiff
     # Common functionality for changes in single json file objects
     class ChangeSingleFile < Change
       def initialize(file, dir)
+        super()
         @status = file[:status] == :deleted ? :deleted : :modified
         @path, @name = self.class.name_from_path(file[:path], dir)
       end
@@ -74,6 +77,7 @@ module ChefDiff
       def self.find_class(list, dir, logger, klass)
         @@logger = logger
         return [] if list.nil? || list.empty?
+
         list
           .select { |x| name_from_path(x[:path], dir) }
           .map do |x|
@@ -85,7 +89,7 @@ module ChefDiff
     # Changes in flat chef dirs for single files
     class ChangeSingleFileFlat < ChangeSingleFile
       def self.name_from_path_type(path, dir, chef_type)
-        re = "^#{dir}\/(.+)\.json$"
+        re = "^#{dir}/(.+).json$"
         debug("[#{chef_type}] Matching #{path} against #{re}")
         m = path.match(re)
         if m
@@ -99,7 +103,7 @@ module ChefDiff
     # Changes in chef dirs allowing sub dirs for single files
     class ChangeSingleFileNested < ChangeSingleFile
       def self.name_from_path_type(path, dir, chef_type)
-        re = "^#{dir}/(([^/]+/)*)(.+)\.json$"
+        re = "^#{dir}/(([^/]+/)*)(.+).json$"
         debug("[[#{chef_type}] Matching #{path} against #{re}")
         m = path.match(re)
         if m
@@ -111,3 +115,4 @@ module ChefDiff
     end
   end
 end
+# rubocop:enable Style/ClassVars
