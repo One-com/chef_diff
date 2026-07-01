@@ -1,6 +1,9 @@
+# frozen_string_literal: true
+
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
-# Copyright 2013-present Facebook
+# Copyright 2013-2014 Facebook
+# Copyright 2014-present One.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,75 +20,70 @@
 require 'spec_helper'
 require 'chef_diff/changes/change'
 require 'chef_diff/changes/databag'
-require 'logger'
-
 describe ChefDiff::Changes::Databag do
-  let(:logger) do
-    Logger.new('/dev/null')
-  end
+  include_context 'silent logger'
   let(:databags_dir) do
     'databags'
   end
 
   fixtures = [
     {
-      :name => 'empty filelists',
-      :files => [],
-      :result => [],
+      name: 'empty filelists',
+      files: [],
+      result: []
     },
     {
-      :name => 'delete databag',
-      :files => [
+      name: 'delete databag',
+      files: [
         {
-          :status => :deleted,
-          :path => 'databags/test/databag1.json'
+          status: :deleted,
+          path: 'databags/test/databag1.json'
         },
         {
-          :status => :deleted,
-          :path => 'databags/test1/test2/databag2.json'
+          status: :deleted,
+          path: 'databags/test1/test2/databag2.json'
         },
         {
-          :status => :modified,
-          :path => 'cookbooks/two/cb_one/metadata.rb'
-        },
+          status: :modified,
+          path: 'cookbooks/two/cb_one/metadata.rb'
+        }
       ],
-      :result => [
-        ['test', :deleted],
-      ],
+      result: [
+        ['test', :deleted]
+      ]
     },
     {
-      :name => 'add/modify a databag',
-      :files => [
+      name: 'add/modify a databag',
+      files: [
         {
-          :status => :modified,
-          :path => 'databags/one/databag1.json'
+          status: :modified,
+          path: 'databags/one/databag1.json'
         },
         {
-          :status => :deleted,
-          :path => 'databags/test/databag2.rb' # wrong extension
+          status: :deleted,
+          path: 'databags/test/databag2.rb' # wrong extension
         },
         {
-          :status => :deleted,
-          :path => 'databags/two/databag3.json'
-        },
+          status: :deleted,
+          path: 'databags/two/databag3.json'
+        }
       ],
-      :result => [
+      result: [
         ['one', :modified], ['two', :deleted]
-      ],
-    },
+      ]
+    }
   ]
 
   fixtures.each do |fixture|
-    it "should handle #{fixture[:name]}" do
-      ChefDiff::Changes::Databag.find(
+    it "handles #{fixture[:name]}" do
+      result = ChefDiff::Changes::Databag.find(
         fixture[:files],
         databags_dir,
         logger
-      ).map do |cb|
-        [cb.full_name, cb.status]
-      end.
-      should eq(fixture[:result])
+      ).map do |change|
+        [change.full_name, change.status]
+      end
+      expect(result).to eq(fixture[:result])
     end
   end
-
 end

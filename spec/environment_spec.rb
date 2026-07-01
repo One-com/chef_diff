@@ -1,6 +1,9 @@
+# frozen_string_literal: true
+
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
-# Copyright 2013-present Facebook
+# Copyright 2013-2014 Facebook
+# Copyright 2014-present One.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,143 +20,138 @@
 require 'spec_helper'
 require 'chef_diff/changes/change'
 require 'chef_diff/changes/environment'
-require 'logger'
-
 describe ChefDiff::Changes::Environment do
-  let(:logger) do
-    Logger.new('/dev/null')
-  end
+  include_context 'silent logger'
   let(:environments_dir) do
     'environments'
   end
 
   fixtures = [
     {
-      :name => 'empty filelists',
-      :files => [],
-      :result => [],
+      name: 'empty filelists',
+      files: [],
+      result: []
     },
     {
-      :name => 'delete environment',
-      :files => [
+      name: 'delete environment',
+      files: [
         {
-          :status => :deleted,
-          :path => 'environments/test.json'
+          status: :deleted,
+          path: 'environments/test.json'
         },
         {
-          :status => :modified,
-          :path => 'cookbooks/two/cb_one/metadata.rb'
-        },
+          status: :modified,
+          path: 'cookbooks/two/cb_one/metadata.rb'
+        }
       ],
-      :result => [
-        ['test', :deleted],
-      ],
+      result: [
+        ['test', :deleted]
+      ]
     },
     {
-      :name => 'delete nested environment',
-      :files => [
+      name: 'delete nested environment',
+      files: [
         {
-          :status => :deleted,
-          :path => 'environments/cluster/test.json'
+          status: :deleted,
+          path: 'environments/cluster/test.json'
         },
         {
-          :status => :modified,
-          :path => 'cookbooks/two/cb_one/metadata.rb'
-        },
+          status: :modified,
+          path: 'cookbooks/two/cb_one/metadata.rb'
+        }
       ],
-      :result => [
-        ['cluster/test', :deleted],
-      ],
+      result: [
+        ['cluster/test', :deleted]
+      ]
     },
     {
-      :name => 'delete deep nested environment',
-      :files => [
+      name: 'delete deep nested environment',
+      files: [
         {
-          :status => :deleted,
-          :path => 'environments/cluster/subsys/test.json'
+          status: :deleted,
+          path: 'environments/cluster/subsys/test.json'
         },
         {
-          :status => :modified,
-          :path => 'cookbooks/two/cb_one/metadata.rb'
-        },
+          status: :modified,
+          path: 'cookbooks/two/cb_one/metadata.rb'
+        }
       ],
-      :result => [
-        ['cluster/subsys/test', :deleted],
-      ],
+      result: [
+        ['cluster/subsys/test', :deleted]
+      ]
     },
     {
-      :name => 'add/modify a environment',
-      :files => [
+      name: 'add/modify a environment',
+      files: [
         {
-          :status => :modified,
-          :path => 'cookbooks/one/cb_one/recipes/test.rb'
+          status: :modified,
+          path: 'cookbooks/one/cb_one/recipes/test.rb'
         },
         {
-          :status => :modified,
-          :path => 'environments/test.json'
+          status: :modified,
+          path: 'environments/test.json'
         },
         {
-          :status => :modified,
-          :path => 'cookbooks/one/cb_one/recipes/test3.rb'
-        },
+          status: :modified,
+          path: 'cookbooks/one/cb_one/recipes/test3.rb'
+        }
       ],
-      :result => [
-        ['test', :modified],
-      ],
+      result: [
+        ['test', :modified]
+      ]
     },
     {
-      :name => 'add/modify a nested environment',
-      :files => [
+      name: 'add/modify a nested environment',
+      files: [
         {
-          :status => :modified,
-          :path => 'cookbooks/one/cb_one/recipes/test.rb'
+          status: :modified,
+          path: 'cookbooks/one/cb_one/recipes/test.rb'
         },
         {
-          :status => :modified,
-          :path => 'environments/cluster/test.json'
+          status: :modified,
+          path: 'environments/cluster/test.json'
         },
         {
-          :status => :modified,
-          :path => 'cookbooks/one/cb_one/recipes/test3.rb'
-        },
+          status: :modified,
+          path: 'cookbooks/one/cb_one/recipes/test3.rb'
+        }
       ],
-      :result => [
-        ['cluster/test', :modified],
-      ],
+      result: [
+        ['cluster/test', :modified]
+      ]
     },
     {
-      :name => 'add/modify a deep nested environment',
-      :files => [
+      name: 'add/modify a deep nested environment',
+      files: [
         {
-          :status => :modified,
-          :path => 'cookbooks/one/cb_one/recipes/test.rb'
+          status: :modified,
+          path: 'cookbooks/one/cb_one/recipes/test.rb'
         },
         {
-          :status => :modified,
-          :path => 'environments/cluster/subsys/test.json'
+          status: :modified,
+          path: 'environments/cluster/subsys/test.json'
         },
         {
-          :status => :modified,
-          :path => 'cookbooks/one/cb_one/recipes/test3.rb'
-        },
+          status: :modified,
+          path: 'cookbooks/one/cb_one/recipes/test3.rb'
+        }
       ],
-      :result => [
-        ['cluster/subsys/test', :modified],
-      ],
-    },
+      result: [
+        ['cluster/subsys/test', :modified]
+      ]
+    }
   ]
 
   fixtures.each do |fixture|
-    it "should handle #{fixture[:name]}" do
-      ChefDiff::Changes::Environment.find(
+    it "handles #{fixture[:name]}" do
+      result = described_class.find(
         fixture[:files],
         environments_dir,
         logger
-      ).map do |cb|
-        [cb.full_name, cb.status]
-      end.
-      should eq(fixture[:result])
+      ).map do |change|
+        [change.full_name, change.status]
+      end
+      expect(result).to eq(fixture[:result])
     end
   end
-
 end

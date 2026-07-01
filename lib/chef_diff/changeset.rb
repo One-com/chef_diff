@@ -1,4 +1,5 @@
-# Encoding: utf-8
+# frozen_string_literal: true
+
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
 # Copyright 2013-2014 Facebook
@@ -34,9 +35,11 @@ module ChefDiff
   # Basically, you always want to use ChefDiff::Changes through this
   # helper class.
   class Changeset
-    class ReferenceError < Exception
+    class ReferenceError < StandardError
     end
 
+    # One ivar per location type plus conditional @files population; length reflects field count, not complexity.
+    # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
     def initialize(logger, repo, start_ref, end_ref, locations)
       @logger = logger
       @repo = repo
@@ -59,6 +62,7 @@ module ChefDiff
         @files = @repo.files
       end
     end
+    # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
 
     def cookbooks
       ChefDiff::Changes::Cookbook.find(@files, @cookbook_dirs, @logger)

@@ -1,4 +1,5 @@
-# Encoding: utf-8
+# frozen_string_literal: true
+
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
 # Copyright 2013-2014 Facebook
@@ -16,7 +17,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# rubocop:disable ClassVars
 module ChefDiff
   module Changes
     # Changeset aware node

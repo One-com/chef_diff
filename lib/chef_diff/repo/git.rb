@@ -1,4 +1,5 @@
-# Encoding: utf-8
+# frozen_string_literal: true
+
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
 # Copyright 2013-2014 Facebook
@@ -23,27 +24,23 @@ module ChefDiff
   # Local checkout wrapper
   class Repo
     # Git provider
+    # One cohesive backend for all git CLI operations; splitting to satisfy the line count would not aid readers.
+    # rubocop:disable Metrics/ClassLength
     class Git < ChefDiff::Repo
       def setup
-        if File.exists?(File.expand_path(@repo_path))
-          @repo = @repo_path
-        else
-          @repo = nil
-        end
+        @repo = (@repo_path if File.exist?(File.expand_path(@repo_path)))
         @bin = 'git'
       end
 
       def exists?
-        if !@repo
-          return false
-        else
-          cmd = Mixlib::ShellOut.new(
+        return false unless @repo
+
+        cmd = Mixlib::ShellOut.new(
           "#{@bin} status",
           cwd: File.expand_path(@repo_path)
-          )
-          cmd.run_command
-          cmd.exitstatus == 0
-        end
+        )
+        cmd.run_command
+        cmd.exitstatus.zero?
       end
 
       def head_rev
@@ -64,6 +61,8 @@ module ChefDiff
       end
 
       # Return files changed between two revisions
+      # Rescue block with per-line error logging pushes this over the default limit.
+      # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
       def changes(start_ref, end_ref)
         check_refs(start_ref, end_ref)
         s = Mixlib::ShellOut.new(
@@ -74,10 +73,10 @@ module ChefDiff
         begin
           files_changed = parse_status(s.stdout).compact
           files_changed.reject { |x| skip_marked?(x[:path]) }
-        rescue => e
+        rescue StandardError => e
           # We've seen some weird non-reproducible failures here
           @logger.error(
-            'Something went wrong. Please please report this output.'
+            'Something went wrong. Please report this output.'
           )
           @logger.error(e)
           s.stdout.lines.each do |line|
@@ -86,6 +85,7 @@ module ChefDiff
           exit(1)
         end
       end
+      # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
 
       def update
         cmd = Mixlib::ShellOut.new(
@@ -95,7 +95,7 @@ module ChefDiff
         if cmd.exitstatus != 0
           @logger.error('Something went wrong with git pull!')
           @logger.error(cmd.stdout)
-          fail
+          raise
         end
         cmd.stdout
       end
@@ -113,6 +113,8 @@ module ChefDiff
         valid_files.map { |x| { path: x, status: :created } }
       end
 
+      # Inline error-check with logging pushes this over the default limit.
+      # rubocop:disable Metrics/MethodLength
       def status
         cmd = Mixlib::ShellOut.new(
           "#{@bin} status --porcelain 2>&1",
@@ -122,18 +124,19 @@ module ChefDiff
         if cmd.exitstatus != 0
           @logger.error('Something went wrong with git status!')
           @logger.error(cmd.stdout)
-          fail
+          raise
         end
         cmd.stdout
       end
+      # rubocop:enable Metrics/MethodLength
 
       private
 
       def check_refs(start_ref, end_ref)
-        fail Changeset::ReferenceError unless ref_exists?(start_ref)
-        unless end_ref.nil? || end_ref == 'HEAD'
-          fail Changeset::ReferenceError unless ref_exists?(end_ref)
-        end
+        raise Changeset::ReferenceError unless ref_exists?(start_ref)
+
+        return if end_ref.nil? || end_ref == 'HEAD'
+        raise Changeset::ReferenceError unless ref_exists?(end_ref)
       end
 
       def skip_marked?(filepath)
@@ -151,13 +154,15 @@ module ChefDiff
           cwd: File.expand_path(@repo_path)
         )
         cmd.run_command
-        cmd.exitstatus == 0
+        cmd.exitstatus.zero?
       end
 
+      # Rescue block with per-line error logging pushes this over the default limit.
+      # rubocop:disable Metrics/MethodLength
       def exec_cmd(cmd, fail_message)
         cmd.run_command.error!
-        cmd.stdout()
-      rescue => e
+        cmd.stdout
+      rescue StandardError => e
         @logger.error(
           fail_message
         )
@@ -165,9 +170,12 @@ module ChefDiff
         cmd.stdout.lines.each do |line|
           @logger.error(line.strip)
         end
-        fail
+        raise
       end
+      # rubocop:enable Metrics/MethodLength
 
+      # Exhaustive case table for git diff-status codes; keeping all codes together reads more clearly than splitting.
+      # rubocop:disable Metrics/MethodLength, Metrics/BlockLength, Metrics/CyclomaticComplexity, Style/MultilineBlockChain
       def parse_status(changes)
         # man git-diff-files
         # Possible status letters are:
@@ -182,11 +190,11 @@ module ChefDiff
         #    be committed)
         # X: "unknown" change type (most probably a bug, please report it)
 
-        # rubocop:disable MultilineBlockChain
         changes.lines.map do |line|
           case line
-          when /^A\s+(\S+)$/
-            # A path
+          when /^A\s+(\S+)$/, /^M(?:\d*)\s+(\S+)$/
+            # A path           -> addition of a file
+            # M<numbers> path  -> modification of a file
             {
               status: :modified,
               path: Regexp.last_match(1)
@@ -201,12 +209,6 @@ module ChefDiff
             # D path
             {
               status: :deleted,
-              path: Regexp.last_match(1)
-            }
-          when /^M(?:\d*)\s+(\S+)$/
-            # M<numbers> path
-            {
-              status: :modified,
               path: Regexp.last_match(1)
             }
           when /^R(?:\d*)\s+(\S+)\s+(\S+)/
@@ -234,7 +236,7 @@ module ChefDiff
               }
             ]
           else
-            fail 'No match'
+            raise 'No match'
           end
         end.flatten.map do |x|
           {
@@ -242,8 +244,9 @@ module ChefDiff
             path: x[:path].sub("#{@repo_path}/", '')
           }
         end
-        # rubocop:enable MultilineBlockChain
       end
+      # rubocop:enable Metrics/MethodLength, Metrics/BlockLength, Metrics/CyclomaticComplexity, Style/MultilineBlockChain
     end
+    # rubocop:enable Metrics/ClassLength
   end
 end

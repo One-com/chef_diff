@@ -1,7 +1,9 @@
-# Encoding: utf-8
+# frozen_string_literal: true
+
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
-# Copyright 2013-present Facebook
+# Copyright 2013-2014 Facebook
+# Copyright 2014-present One.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +31,7 @@ module ChefDiff
       @repo = nil
       @bin = nil
       setup
-    rescue
+    rescue StandardError
       @logger.warn("Unable to read repo from #{File.expand_path(repo_path)}")
       exit(1)
     end
@@ -43,86 +45,78 @@ module ChefDiff
         require 'chef_diff/repo/git'
         ChefDiff::Repo::Git.new(repo_path, logger)
       else
-        fail "Do not know repo type #{type}"
+        raise "Do not know repo type #{type}"
       end
     end
 
     def exists?
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def status
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def setup
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def head_rev
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def head_msg
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def head_msg=
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def head_parents
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def latest_revision
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def create(_url)
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     # Return files changed between two revisions
     def changes(_start_ref, _end_ref)
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def update
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     # Return all files
     def files
-      fail 'Not implemented'
-    end
-
-    def latest_revision
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def head
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def checkout
-      fail 'Not implemented'
-    end
-
-    def update
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def last_author
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def last_msg
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
 
     def last_msg=
-      fail 'Not implemented'
+      raise 'Not implemented'
     end
   end
 end
