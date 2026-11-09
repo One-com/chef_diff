@@ -18,9 +18,10 @@
 
 require 'spec_helper'
 require 'chef_diff/changeset'
+require 'chef_diff/repo'
 describe ChefDiff::Changeset do
-  include_context 'silent logger'
-  let(:repo) { double('repo') }
+  include_context 'with a silent logger'
+  let(:repo) { instance_double(ChefDiff::Repo) }
   let(:locations) do
     {
       cookbook_dirs: ['cookbooks'],
@@ -35,6 +36,8 @@ describe ChefDiff::Changeset do
   end
 
   context 'when start_ref is provided' do
+    subject(:changeset) { described_class.new(logger, repo, 'abc123', 'def456', locations) }
+
     let(:changed_files) do
       [
         { status: :modified, path: 'roles/web.json' },
@@ -43,54 +46,40 @@ describe ChefDiff::Changeset do
       ]
     end
 
-    before do
-      allow(repo).to receive(:changes).with('abc123', 'def456')
-                                      .and_return(changed_files)
-    end
-
-    subject { described_class.new(logger, repo, 'abc123', 'def456', locations) }
+    before { allow(repo).to receive_messages(changes: changed_files, files: []) }
 
     it 'calls repo.changes with the supplied refs' do
-      expect(repo).to receive(:changes).with('abc123', 'def456')
-                                       .and_return(changed_files)
-      described_class.new(logger, repo, 'abc123', 'def456', locations)
+      changeset
+      expect(repo).to have_received(:changes).with('abc123', 'def456')
     end
 
     it 'does not call repo.files' do
-      expect(repo).not_to receive(:files)
-      subject
+      changeset
+      expect(repo).not_to have_received(:files)
     end
 
     it 'returns changed roles' do
-      result = subject.roles
-      expect(result.length).to eq(1)
-      expect(result.first.name).to eq('web')
-      expect(result.first.status).to eq(:modified)
+      expect(changeset.roles).to contain_exactly(have_attributes(name: 'web', status: :modified))
     end
 
     it 'returns changed environments' do
-      result = subject.environments
-      expect(result.length).to eq(1)
-      expect(result.first.name).to eq('production')
+      expect(changeset.environments).to contain_exactly(have_attributes(name: 'production'))
     end
 
     it 'returns changed cookbooks' do
-      result = subject.cookbooks
-      expect(result.length).to eq(1)
-      expect(result.first.name).to eq('my_cb')
-      expect(result.first.status).to eq(:modified)
+      expect(changeset.cookbooks).to contain_exactly(have_attributes(name: 'my_cb', status: :modified))
     end
 
-    it 'returns empty arrays for change types with no matching files' do
-      expect(subject.users).to eq([])
-      expect(subject.nodes).to eq([])
-      expect(subject.clients).to eq([])
-      expect(subject.databags).to eq([])
-      expect(subject.roles_local).to eq([])
+    %i[users nodes clients databags roles_local].each do |meth|
+      it "returns no #{meth}" do
+        expect(changeset.public_send(meth)).to eq([])
+      end
     end
   end
 
   context 'when start_ref is nil (full repo scan)' do
+    subject(:changeset) { described_class.new(logger, repo, nil, nil, locations) }
+
     let(:all_files) do
       [
         { status: :created, path: 'roles/base.json' },
@@ -104,77 +93,52 @@ describe ChefDiff::Changeset do
       ]
     end
 
-    before { allow(repo).to receive(:files).and_return(all_files) }
-
-    subject { described_class.new(logger, repo, nil, nil, locations) }
+    before { allow(repo).to receive_messages(files: all_files, changes: []) }
 
     it 'calls repo.files' do
-      expect(repo).to receive(:files).and_return(all_files)
-      described_class.new(logger, repo, nil, nil, locations)
+      changeset
+      expect(repo).to have_received(:files)
     end
 
     it 'does not call repo.changes' do
-      expect(repo).not_to receive(:changes)
-      subject
+      changeset
+      expect(repo).not_to have_received(:changes)
     end
 
-    it 'returns all roles' do
-      result = subject.roles
-      expect(result.length).to eq(1)
-      expect(result.first.name).to eq('base')
-    end
-
-    it 'returns all nodes' do
-      result = subject.nodes
-      expect(result.length).to eq(1)
-      expect(result.first.name).to eq('web01')
-    end
-
-    it 'returns all databags' do
-      result = subject.databags
-      expect(result.length).to eq(1)
-      expect(result.first.name).to eq('secrets')
-    end
-
-    it 'returns all users' do
-      result = subject.users
-      expect(result.length).to eq(1)
-      expect(result.first.name).to eq('admin')
-    end
-
-    it 'returns all clients' do
-      result = subject.clients
-      expect(result.length).to eq(1)
-      expect(result.first.name).to eq('node1')
-    end
-
-    it 'returns all environments' do
-      result = subject.environments
-      expect(result.length).to eq(1)
-      expect(result.first.name).to eq('staging')
-    end
-
-    it 'returns all roles_local' do
-      result = subject.roles_local
-      expect(result.length).to eq(1)
-      expect(result.first.full_name).to eq('env1/web')
-    end
-
-    it 'returns all cookbooks' do
-      result = subject.cookbooks
-      expect(result.length).to eq(1)
-      expect(result.first.name).to eq('base_cb')
+    {
+      roles: { name: 'base' },
+      nodes: { name: 'web01' },
+      databags: { name: 'secrets' },
+      users: { name: 'admin' },
+      clients: { name: 'node1' },
+      environments: { name: 'staging' },
+      roles_local: { full_name: 'env1/web' },
+      cookbooks: { name: 'base_cb' }
+    }.each do |meth, attributes|
+      it "returns all #{meth}" do
+        expect(changeset.public_send(meth)).to contain_exactly(have_attributes(attributes))
+      end
     end
   end
 
-  describe 'all accessor methods return [] for an empty file list' do
-    before { allow(repo).to receive(:changes).and_return([]) }
+  context 'without cookbook_dirs in the locations' do
+    subject(:changeset) { described_class.new(logger, repo, 'a', 'b', locations.merge(cookbook_dirs: nil)) }
 
-    subject { described_class.new(logger, repo, 'a', 'b', locations) }
+    before { allow(repo).to receive(:changes).and_return([{ status: :modified, path: 'cookbooks/cb/metadata.rb' }]) }
+
+    it '#cookbooks returns []' do
+      expect(changeset.cookbooks).to eq([])
+    end
+  end
+
+  context 'with an empty file list' do
+    subject(:changeset) { described_class.new(logger, repo, 'a', 'b', locations) }
+
+    before { allow(repo).to receive(:changes).and_return([]) }
 
     %i[cookbooks roles roles_local nodes clients environments databags users].each do |meth|
       it "##{meth} returns []" do
-        expect(subject.send(meth)).to eq([])
+        expect(changeset.public_send(meth)).to eq([])
       end
     end
   end

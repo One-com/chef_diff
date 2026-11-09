@@ -21,19 +21,19 @@ require 'spec_helper'
 require 'chef_diff/changes/change'
 require 'chef_diff/changes/role'
 describe ChefDiff::Changes::Role do
-  include_context 'silent logger'
+  include_context 'with a silent logger'
   let(:roles_dir) do
     'roles'
   end
 
   fixtures = [
     {
-      name: 'empty filelists',
+      name: 'no files',
       files: [],
       result: []
     },
     {
-      name: 'delete role',
+      name: 'a deleted role',
       files: [
         {
           status: :deleted,
@@ -49,7 +49,7 @@ describe ChefDiff::Changes::Role do
       ]
     },
     {
-      name: 'add/modify a role',
+      name: 'a modified role',
       files: [
         {
           status: :modified,
@@ -70,16 +70,14 @@ describe ChefDiff::Changes::Role do
     }
   ]
 
-  fixtures.each do |fixture|
-    it "handles #{fixture[:name]}" do
-      result = described_class.find(
-        fixture[:files],
-        roles_dir,
-        logger
-      ).map do |change|
-        [change.full_name, change.status]
+  describe '.find' do
+    fixtures.each do |fixture|
+      context "with #{fixture[:name]}" do
+        it 'returns full name and status of its files' do
+          changes = described_class.find(fixture[:files], roles_dir, logger)
+          expect(changes.map { |change| [change.full_name, change.status] }).to eq(fixture[:result])
+        end
       end
-      expect(result).to eq(fixture[:result])
     end
   end
 end

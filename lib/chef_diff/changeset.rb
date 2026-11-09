@@ -39,7 +39,7 @@ module ChefDiff
     end
 
     # One ivar per location type plus conditional @files population; length reflects field count, not complexity.
-    # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
+    # rubocop:disable-next Metrics/MethodLength, Metrics/AbcSize
     def initialize(logger, repo, start_ref, end_ref, locations)
       @logger = logger
       @repo = repo
@@ -62,7 +62,6 @@ module ChefDiff
         @files = @repo.files
       end
     end
-    # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
 
     def cookbooks
       ChefDiff::Changes::Cookbook.find(@files, @cookbook_dirs, @logger)

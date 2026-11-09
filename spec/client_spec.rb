@@ -20,19 +20,19 @@ require 'spec_helper'
 require 'chef_diff/changes/change'
 require 'chef_diff/changes/client'
 describe ChefDiff::Changes::Client do
-  include_context 'silent logger'
+  include_context 'with a silent logger'
   let(:clients_dir) do
     'clients'
   end
 
   fixtures = [
     {
-      name: 'empty filelists',
+      name: 'no files',
       files: [],
       result: []
     },
     {
-      name: 'delete client',
+      name: 'a deleted client',
       files: [
         {
           status: :deleted,
@@ -48,7 +48,7 @@ describe ChefDiff::Changes::Client do
       ]
     },
     {
-      name: 'delete nested client',
+      name: 'a deleted nested client',
       files: [
         {
           status: :deleted,
@@ -64,7 +64,7 @@ describe ChefDiff::Changes::Client do
       ]
     },
     {
-      name: 'delete deep nested client',
+      name: 'a deleted deep nested client',
       files: [
         {
           status: :deleted,
@@ -80,7 +80,7 @@ describe ChefDiff::Changes::Client do
       ]
     },
     {
-      name: 'add/modify a client',
+      name: 'a modified client',
       files: [
         {
           status: :modified,
@@ -100,7 +100,7 @@ describe ChefDiff::Changes::Client do
       ]
     },
     {
-      name: 'add/modify a nested client',
+      name: 'a modified nested client',
       files: [
         {
           status: :modified,
@@ -120,7 +120,7 @@ describe ChefDiff::Changes::Client do
       ]
     },
     {
-      name: 'add/modify a deep nested client',
+      name: 'a modified deep nested client',
       files: [
         {
           status: :modified,
@@ -141,16 +141,14 @@ describe ChefDiff::Changes::Client do
     }
   ]
 
-  fixtures.each do |fixture|
-    it "handles #{fixture[:name]}" do
-      result = described_class.find(
-        fixture[:files],
-        clients_dir,
-        logger
-      ).map do |change|
-        [change.full_name, change.status]
+  describe '.find' do
+    fixtures.each do |fixture|
+      context "with #{fixture[:name]}" do
+        it 'returns full name and status of its files' do
+          changes = described_class.find(fixture[:files], clients_dir, logger)
+          expect(changes.map { |change| [change.full_name, change.status] }).to eq(fixture[:result])
+        end
       end
-      expect(result).to eq(fixture[:result])
     end
   end
 end

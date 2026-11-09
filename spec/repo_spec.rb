@@ -22,9 +22,12 @@ require 'chef_diff/repo'
 require 'chef_diff/repo/git'
 require 'chef_diff/repo/svn'
 describe ChefDiff::Repo do
-  include_context 'silent logger'
+  include_context 'with a silent logger'
   let(:class_interface) { described_class.public_methods.sort }
   let(:instance_interface) { described_class.instance_methods.sort }
+  # allocate skips initialize, whose base #setup raises; the abstract methods
+  # need no state.
+  let(:repo) { described_class.allocate }
 
   # Misc Repos should not expose anything more than parent class,
   # which default to 'Not implemented'
@@ -32,78 +35,55 @@ describe ChefDiff::Repo do
     it "#{klass} conforms to ChefDiff::Repo class interface" do
       expect(klass.public_methods.sort).to eq(class_interface)
     end
+
     it "#{klass} conforms to ChefDiff::Repo instance interface" do
       expect(klass.instance_methods.sort).to eq(instance_interface)
     end
   end
 
   describe '.get' do
-    it 'raises for unknown repo types' do
-      expect do
-        described_class.get('unknown', '/tmp', logger)
-      end.to raise_error(RuntimeError, 'Do not know repo type unknown')
-    end
-
-    it 'returns a Svn instance for svn type' do
-      repo = described_class.get('svn', '/tmp', logger)
-      expect(repo).to be_a(ChefDiff::Repo::Svn)
-    end
-
-    it 'returns a Git instance for git type' do
-      allow_any_instance_of(ChefDiff::Repo::Git).to receive(:setup)
-      repo = described_class.get('git', '/tmp', logger)
-      expect(repo).to be_a(ChefDiff::Repo::Git)
-    end
-  end
-
-  describe '#initialize rescue path' do
-    it 'warns and exits when setup raises' do
-      allow(logger).to receive(:warn)
-      # Base Repo#setup raises 'Not implemented', triggering the rescue → exit(1)
-      expect { described_class.new('/tmp', logger) }.to raise_error(SystemExit)
-      expect(logger).to have_received(:warn).with(a_string_matching(/Unable to read repo/))
-    end
-  end
-
-  describe 'stub methods all raise RuntimeError' do
-    let(:repo) do
-      allow_any_instance_of(ChefDiff::Repo).to receive(:setup)
-      described_class.new('/tmp', logger)
-    end
-
-    %i[exists? status head_rev head_msg head_parents latest_revision
-       files head checkout last_author last_msg].each do |meth|
-      it "##{meth} raises 'Not implemented'" do
-        expect { repo.send(meth) }.to raise_error(RuntimeError, 'Not implemented')
+    context 'with an unknown type' do
+      it 'raises' do
+        expect do
+          described_class.get('unknown', '/tmp', logger)
+        end.to raise_error(RuntimeError, 'Do not know repo type unknown')
       end
     end
 
-    it "#create raises 'Not implemented'" do
-      expect { repo.send(:create, 'http://example.com/repo') }
-        .to raise_error(RuntimeError, 'Not implemented')
+    context 'with svn' do
+      it 'returns a Svn instance' do
+        expect(described_class.get('svn', '/tmp', logger)).to be_a(ChefDiff::Repo::Svn)
+      end
     end
 
-    it "#changes raises 'Not implemented'" do
-      expect { repo.send(:changes, 'a', 'b') }
-        .to raise_error(RuntimeError, 'Not implemented')
+    context 'with git' do
+      it 'returns a Git instance' do
+        git = instance_double(ChefDiff::Repo::Git)
+        allow(ChefDiff::Repo::Git).to receive(:new).with('/tmp', logger).and_return(git)
+        expect(described_class.get('git', '/tmp', logger)).to be(git)
+      end
     end
+  end
 
-    it "#head_msg= raises 'Not implemented'" do
-      expect { repo.send(:head_msg=) }.to raise_error(RuntimeError, 'Not implemented')
+  # The base class only defines the interface; every method must be overridden.
+  %i[exists? status setup head_rev head_msg head_msg= head_parents latest_revision
+     update files head checkout last_author last_msg last_msg=].each do |meth|
+    describe "##{meth}" do
+      it 'raises Not implemented' do
+        expect { repo.public_send(meth) }.to raise_error(RuntimeError, 'Not implemented')
+      end
     end
+  end
 
-    it "#last_msg= raises 'Not implemented'" do
-      expect { repo.send(:last_msg=) }.to raise_error(RuntimeError, 'Not implemented')
+  describe '#create' do
+    it 'raises Not implemented' do
+      expect { repo.create('http://example.com/repo') }.to raise_error(RuntimeError, 'Not implemented')
     end
+  end
 
-    it "#setup raises 'Not implemented'" do
-      # allocate bypasses initialize (and any any_instance stub applied via let)
-      raw = described_class.allocate
-      expect { raw.setup }.to raise_error(RuntimeError, 'Not implemented')
-    end
-
-    it "#update raises 'Not implemented'" do
-      expect { repo.update }.to raise_error(RuntimeError, 'Not implemented')
+  describe '#changes' do
+    it 'raises Not implemented' do
+      expect { repo.changes('a', 'b') }.to raise_error(RuntimeError, 'Not implemented')
     end
   end
 end

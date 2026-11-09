@@ -44,7 +44,11 @@ optparse = OptionParser.new do |opts|
   end
 end
 
-optparse.parse!
+begin
+  optparse.parse!
+rescue OptionParser::ParseError => e
+  abort("chef-diff: #{e.message}")
+end
 
 repo_path = ARGV.pop
 
@@ -56,16 +60,24 @@ end
 log.level = (options[:verbosity] || Logger::WARN)
 
 chef_repo = ChefDiff::Repo.get('git', repo_path, log)
-changeset = ChefDiff::Changeset.new(log, chef_repo, options[:start_ref],
-                                    options[:end_ref],
-                                    cookbook_dirs: ['cookbooks'],
-                                    role_dir: 'roles',
-                                    role_local_dir: 'roles_local',
-                                    node_dir: 'nodes',
-                                    environment_dir: 'environments',
-                                    client_dir: 'clients',
-                                    databag_dir: 'data_bags',
-                                    user_dir: 'users')
+# exists? is also false for a real repo git refuses to read (dubious
+# ownership, newer format), so don't claim it isn't one.
+abort("chef-diff: cannot open #{repo_path} as a git repository") unless chef_repo.exists?
+
+begin
+  changeset = ChefDiff::Changeset.new(log, chef_repo, options[:start_ref],
+                                      options[:end_ref],
+                                      cookbook_dirs: ['cookbooks'],
+                                      role_dir: 'roles',
+                                      role_local_dir: 'roles_local',
+                                      node_dir: 'nodes',
+                                      environment_dir: 'environments',
+                                      client_dir: 'clients',
+                                      databag_dir: 'data_bags',
+                                      user_dir: 'users')
+rescue ChefDiff::Changeset::ReferenceError => e
+  abort("chef-diff: #{e.message}")
+end
 
 puts
 %w[cookbooks roles roles_local nodes clients

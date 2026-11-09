@@ -21,14 +21,6 @@ module ChefDiff
   module Changes
     # Changeset aware environment
     class Environment < ChangeSingleFileNested
-      def self.name_from_path(path, environment_dir)
-        name_from_path_type(path, environment_dir, 'environment')
-      end
-
-      def self.find(list, environment_dir, logger)
-        find_class(list, environment_dir, logger,
-                   ChefDiff::Changes::Environment)
-      end
     end
   end
 end

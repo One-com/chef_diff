@@ -17,42 +17,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# @@logger is shared across the whole Change hierarchy; class instance variables are not inherited by subclasses.
-# rubocop:disable Style/ClassVars
 module ChefDiff
   module Changes
     # Changeset aware databag
     class Databag < Change
       attr_accessor :item
 
-      def self.name_from_path(path, databag_dir)
-        re = %r{^#{databag_dir}/([^/]+)/([^/]+)\.json}
-        debug("[databag] Matching #{path} against #{re}")
-        m = path.match(re)
-        if m
-          info("Databag is #{m[1]} item is #{m[2]}")
-          return m[1], m[2]
-        end
-        nil
+      # dir/<databag>/<item>.json, exactly one level below dir.
+      def self.path_regexp(dir)
+        dir && %r{\A#{Regexp.escape(dir)}/([^/]+)/([^/]+)\.json\z}
       end
 
-      def initialize(file, databag_dir)
+      # [databag, item], so name_from_path returns that pair too.
+      def self.parts_from_match(match)
+        match && [match[1], match[2]]
+      end
+
+      # parts is [databag, item] when the caller has already matched the path.
+      def initialize(file, databag_dir, parts = nil)
         super()
-        @status = file[:status]
-        @name, @item = self.class.name_from_path(file[:path], databag_dir)
-      end
-
-      def self.find(list, databag_dir, logger)
-        @@logger = logger
-        return [] if list.nil? || list.empty?
-
-        list
-          .select { |x| name_from_path(x[:path], databag_dir) }
-          .map do |x|
-            ChefDiff::Changes::Databag.new(x, databag_dir)
-          end
+        @status = self.class.change_status(file[:status])
+        @name, @item = parts || self.class.name_from_path(file[:path], databag_dir)
+        debug { "[#{self.class}] #{file[:path]} is #{@name} item #{@item}" }
       end
     end
   end
 end
-# rubocop:enable Style/ClassVars

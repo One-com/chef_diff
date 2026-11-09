@@ -22,19 +22,19 @@ require 'chef_diff/changes/change'
 require 'chef_diff/changes/cookbook'
 require 'chef_diff/changeset'
 describe ChefDiff::Changes::Cookbook do
-  include_context 'silent logger'
+  include_context 'with a silent logger'
   let(:cookbook_dirs) do
     ['cookbooks/one', 'cookbooks/two']
   end
 
   fixtures = [
     {
-      name: 'empty filelists',
+      name: 'no files',
       files: [],
       result: []
     },
     {
-      name: 'modifying of a cookbook',
+      name: 'a modified recipe and metadata.rb',
       files: [
         {
           status: :modified,
@@ -50,7 +50,7 @@ describe ChefDiff::Changes::Cookbook do
       ]
     },
     {
-      name: 'a mix of in-place modifications and deletes',
+      name: 'modified and deleted recipes',
       files: [
         {
           status: :modified,
@@ -70,7 +70,7 @@ describe ChefDiff::Changes::Cookbook do
       ]
     },
     {
-      name: 'removing metadata.rb - invalid cookbook, delete it',
+      name: 'a deleted metadata.rb',
       files: [
         {
           status: :modified,
@@ -86,7 +86,55 @@ describe ChefDiff::Changes::Cookbook do
       ]
     },
     {
-      name: 'changing cookbook location',
+      name: 'a deleted nested fixture cookbook',
+      files: [
+        {
+          status: :deleted,
+          path: 'cookbooks/one/cb_one/test/fixtures/cookbooks/fake/metadata.rb'
+        },
+        {
+          status: :deleted,
+          path: 'cookbooks/one/cb_one/test/fixtures/cookbooks/fake/recipes/default.rb'
+        },
+        {
+          status: :modified,
+          path: 'cookbooks/one/cb_one/README.md'
+        }
+      ],
+      result: [
+        ['cb_one', :modified]
+      ]
+    },
+    {
+      name: 'a type change of metadata.rb',
+      files: [
+        {
+          status: :deleted,
+          path: 'cookbooks/one/cb_one/metadata.rb'
+        },
+        {
+          status: :modified,
+          path: 'cookbooks/one/cb_one/metadata.rb'
+        }
+      ],
+      result: [
+        ['cb_one', :modified]
+      ]
+    },
+    {
+      name: 'a deleted file ending in metadata.rb',
+      files: [
+        {
+          status: :deleted,
+          path: 'cookbooks/one/cb_one/files/default/old_metadata.rb'
+        }
+      ],
+      result: [
+        ['cb_one', :modified]
+      ]
+    },
+    {
+      name: 'the cookbook moved to another dir',
       files: [
         {
           status: :deleted,
@@ -115,7 +163,7 @@ describe ChefDiff::Changes::Cookbook do
       ]
     },
     {
-      name: 'modifying metadata only',
+      name: 'only metadata.rb modified',
       files: [
         {
           status: :modified,
@@ -127,7 +175,7 @@ describe ChefDiff::Changes::Cookbook do
       ]
     },
     {
-      name: 'modifying README only',
+      name: 'only the README modified',
       files: [
         {
           status: :modified,
@@ -139,7 +187,7 @@ describe ChefDiff::Changes::Cookbook do
       ]
     },
     {
-      name: 'modifying recipe only',
+      name: 'only a recipe modified',
       files: [
         {
           status: :modified,
@@ -151,7 +199,7 @@ describe ChefDiff::Changes::Cookbook do
       ]
     },
     {
-      name: 'skipping non-cookbook files',
+      name: 'only files outside any cookbook',
       files: [
         {
           status: :modified,
@@ -170,16 +218,99 @@ describe ChefDiff::Changes::Cookbook do
     }
   ]
 
-  fixtures.each do |fixture|
-    it "handles #{fixture[:name]}" do
-      result = described_class.find(
-        fixture[:files],
-        cookbook_dirs,
-        logger
-      ).map do |cb|
-        [cb.full_name, cb.status]
+  describe '.new' do
+    subject(:cookbook) { described_class.new(files, cookbook_dirs) }
+
+    # One file from cb_two, then many from cb_one, so a random pick would
+    # rarely land on the first. The first file is neither the smallest path
+    # nor the metadata.rb, so picking either of those names the wrong one.
+    context 'without parts and files from two cookbooks' do
+      let(:files) do
+        (['cookbooks/one/cb_two/recipes/default.rb', 'cookbooks/one/cb_one/metadata.rb'] +
+          Array.new(20) { |i| "cookbooks/one/cb_one/recipes/#{i}.rb" })
+          .map { |path| { status: :modified, path: path } }
       end
-      expect(result).to eq(fixture[:result])
+
+      it 'takes the name from the first file' do
+        expect(cookbook.name).to eq('cb_two')
+      end
+    end
+  end
+
+  describe '.name_from_path' do
+    subject { described_class.name_from_path(path, dirs) }
+
+    let(:dirs) { cookbook_dirs }
+
+    {
+      'cookbooks/one/cb/recipes/a.rb' => { cookbook_dir: 'cookbooks/one', name: 'cb' },
+      'cookbooks/two/cb/metadata.rb' => { cookbook_dir: 'cookbooks/two', name: 'cb' },
+      'cookbooks/one/OWNERS' => nil,
+      'cookbooks/three/cb/metadata.rb' => nil,
+      "foo\ncookbooks/one/cb/metadata.rb" => nil,
+      'xcookbooks/one/cb/metadata.rb' => nil
+    }.each do |example_path, parts|
+      context "with #{example_path.inspect}" do
+        let(:path) { example_path }
+
+        it { is_expected.to eq(parts) }
+      end
+    end
+
+    context 'with overlapping dirs' do
+      let(:dirs) { %w[cookbooks/site cookbooks] }
+      let(:path) { 'cookbooks/site/cb/metadata.rb' }
+
+      it { is_expected.to eq(cookbook_dir: 'cookbooks/site', name: 'cb') }
+    end
+
+    context 'with a dir containing a regexp metacharacter' do
+      let(:dirs) { ['cook.books'] }
+      let(:path) { 'cookxbooks/cb/metadata.rb' }
+
+      it { is_expected.to be_nil }
+    end
+
+    context 'without dirs' do
+      let(:dirs) { [] }
+      let(:path) { 'cookbooks/one/cb/metadata.rb' }
+
+      it { is_expected.to be_nil }
+    end
+  end
+
+  describe '.find' do
+    # find stores logger in the shared @@logger; this one is live.
+    after { ChefDiff::Changes::Change.class_variable_set(:@@logger, nil) }
+
+    fixtures.each do |fixture|
+      context "with #{fixture[:name]}" do
+        it 'returns name and status of each cookbook' do
+          changes = described_class.find(fixture[:files], cookbook_dirs, logger)
+          expect(changes.map { |change| [change.full_name, change.status] }).to eq(fixture[:result])
+        end
+      end
+    end
+
+    context 'with a logger at INFO' do
+      let(:log) { StringIO.new }
+      let(:logger) { Logger.new(log, level: :info) }
+      let(:files) do
+        %w[cookbooks/one/a/metadata.rb cookbooks/one/a/recipes/x.rb cookbooks/two/b/metadata.rb]
+          .map { |path| { status: :modified, path: path } }
+      end
+
+      it 'logs one summary line' do
+        described_class.find(files, cookbook_dirs, logger)
+        expect(log.string.lines)
+          .to contain_exactly(include('[ChefDiff::Changes::Cookbook] 2 matched in cookbooks/one, cookbooks/two'))
+      end
+    end
+
+    context 'without cookbook dirs' do
+      subject { described_class.find([{ status: :modified, path: 'cookbooks/one/a/metadata.rb' }], nil, logger) }
+
+      it { is_expected.to eq([]) }
     end
   end
 end

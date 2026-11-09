@@ -31,9 +31,6 @@ module ChefDiff
       @repo = nil
       @bin = nil
       setup
-    rescue StandardError
-      @logger.warn("Unable to read repo from #{File.expand_path(repo_path)}")
-      exit(1)
     end
 
     def self.get(type, repo_path, logger)

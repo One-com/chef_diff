@@ -18,7 +18,7 @@
 # limitations under the License.
 
 # @@logger/@@path shared across the Change hierarchy; class instance variables are not inherited by subclasses.
-# rubocop:disable Style/ClassVars
+# rubocop:disable-next Style/ClassVars
 module ChefDiff
   # A set of classes that represent a given item's change (a cookbook
   # that's changed, a role that's changed or a databag item that's changed).
@@ -47,72 +47,102 @@ module ChefDiff
         @@logger = log
       end
 
-      def self.info(msg)
-        @@logger&.info(msg)
+      # Log helpers. Pass a block instead of a String where building the
+      # message costs something: a ::Logger only calls it when the level is
+      # on. The logger must therefore follow ::Logger's block convention.
+      def self.info(msg = nil, &block)
+        @@logger&.info(msg, &block)
       end
 
-      def self.debug(msg)
-        @@logger&.debug(msg)
+      def self.debug(msg = nil, &block)
+        @@logger&.debug(msg, &block)
       end
 
-      def info(msg)
-        ChefDiff::Changes::Change.info(msg)
+      def info(msg = nil, &block)
+        ChefDiff::Changes::Change.info(msg, &block)
       end
 
-      def debug(msg)
-        ChefDiff::Changes::Change.debug(msg)
+      def debug(msg = nil, &block)
+        ChefDiff::Changes::Change.debug(msg, &block)
+      end
+
+      # Given a list of changed files, returns an object of this kind for
+      # each one under dir, in list order. Logs one summary line at INFO.
+      # Cookbook overrides this: one cookbook spans many files.
+      #
+      # Subclasses define their path shape with two class methods, also used
+      # by name_from_path: path_regexp(dir) returns the anchored pattern for
+      # dir (nil for a nil dir), and parts_from_match(match) turns its
+      # MatchData into the constructor's parts (nil for no match).
+      #
+      # The pattern is compiled once per call, and the parts are handed to
+      # new(file, dir, parts) so the constructor doesn't match again. On a
+      # full repo listing (start_ref nil), per-path compiling and double
+      # matching would dominate the run.
+      def self.find(list, dir, logger)
+        @@logger = logger
+        re = path_regexp(dir)
+        return [] if re.nil? || list.nil? || list.empty?
+
+        changes = list.filter_map do |file|
+          parts = parts_from_match(re.match(file[:path]))
+          new(file, dir, parts) if parts
+        end
+        info { "[#{self}] #{changes.size} matched in #{dir}" }
+        changes
+      end
+
+      # The status of a change built from one file: :deleted when the file
+      # is gone, else :modified, so callers that select :modified also get
+      # the :created entries of a full scan. Cookbook has its own rule: one
+      # cookbook spans many files.
+      def self.change_status(file_status)
+        file_status == :deleted ? :deleted : :modified
+      end
+
+      # The parts for path, or nil when it doesn't name an object in dir.
+      def self.name_from_path(path, dir)
+        re = path_regexp(dir)
+        debug { "[#{self}] Matching #{path} against #{re.inspect}" }
+        parts_from_match(re&.match(path))
       end
     end
 
-    # Common functionality for changes in single json file objects
+    # Common functionality for changes in single json file objects.
     class ChangeSingleFile < Change
-      def initialize(file, dir)
+      # parts is [subdir, name] when the caller has already matched the path.
+      def initialize(file, dir, parts = nil)
         super()
-        @status = file[:status] == :deleted ? :deleted : :modified
-        @path, @name = self.class.name_from_path(file[:path], dir)
-      end
-
-      # Given a list of changed files
-      # create a list of Role objects
-      def self.find_class(list, dir, logger, klass)
-        @@logger = logger
-        return [] if list.nil? || list.empty?
-
-        list
-          .select { |x| name_from_path(x[:path], dir) }
-          .map do |x|
-            klass.new(x, dir)
-          end
+        @status = self.class.change_status(file[:status])
+        @path, @name = parts || self.class.name_from_path(file[:path], dir)
+        # Not full_name: name is nil when file[:path] lies outside dir.
+        debug { "[#{self.class}] #{file[:path]} is #{@path}#{@name}" }
       end
     end
 
     # Changes in flat chef dirs for single files
     class ChangeSingleFileFlat < ChangeSingleFile
-      def self.name_from_path_type(path, dir, chef_type)
-        re = "^#{dir}/(.+).json$"
-        debug("[#{chef_type}] Matching #{path} against #{re}")
-        m = path.match(re)
-        if m
-          info("Name is #{m[1]}")
-          return nil, m[1]
-        end
-        nil
+      # dir/<name>.json, where name may contain slashes but not end in one,
+      # so a bare ".json" in a subdir names nothing.
+      def self.path_regexp(dir)
+        dir && %r{\A#{Regexp.escape(dir)}/(.*[^/])\.json\z}
+      end
+
+      def self.parts_from_match(match)
+        match && [nil, match[1]]
       end
     end
 
     # Changes in chef dirs allowing sub dirs for single files
     class ChangeSingleFileNested < ChangeSingleFile
-      def self.name_from_path_type(path, dir, chef_type)
-        re = "^#{dir}/(([^/]+/)*)(.+).json$"
-        debug("[[#{chef_type}] Matching #{path} against #{re}")
-        m = path.match(re)
-        if m
-          info("Name is #{m[1]}#{m[3]}")
-          return m[1], m[3]
-        end
-        nil
+      # dir/[<segment>/...]<name>.json, where name is the non-empty basename.
+      def self.path_regexp(dir)
+        dir && %r{\A#{Regexp.escape(dir)}/((?:[^/]+/)*)([^/]+)\.json\z}
+      end
+
+      def self.parts_from_match(match)
+        match && [match[1], match[2]]
       end
     end
   end
 end
-# rubocop:enable Style/ClassVars
