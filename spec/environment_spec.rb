@@ -21,19 +21,19 @@ require 'spec_helper'
 require 'chef_diff/changes/change'
 require 'chef_diff/changes/environment'
 describe ChefDiff::Changes::Environment do
-  include_context 'silent logger'
+  include_context 'with a silent logger'
   let(:environments_dir) do
     'environments'
   end
 
   fixtures = [
     {
-      name: 'empty filelists',
+      name: 'no files',
       files: [],
       result: []
     },
     {
-      name: 'delete environment',
+      name: 'a deleted environment',
       files: [
         {
           status: :deleted,
@@ -49,7 +49,7 @@ describe ChefDiff::Changes::Environment do
       ]
     },
     {
-      name: 'delete nested environment',
+      name: 'a deleted nested environment',
       files: [
         {
           status: :deleted,
@@ -65,7 +65,7 @@ describe ChefDiff::Changes::Environment do
       ]
     },
     {
-      name: 'delete deep nested environment',
+      name: 'a deleted deep nested environment',
       files: [
         {
           status: :deleted,
@@ -81,7 +81,7 @@ describe ChefDiff::Changes::Environment do
       ]
     },
     {
-      name: 'add/modify a environment',
+      name: 'a modified environment',
       files: [
         {
           status: :modified,
@@ -101,7 +101,7 @@ describe ChefDiff::Changes::Environment do
       ]
     },
     {
-      name: 'add/modify a nested environment',
+      name: 'a modified nested environment',
       files: [
         {
           status: :modified,
@@ -121,7 +121,7 @@ describe ChefDiff::Changes::Environment do
       ]
     },
     {
-      name: 'add/modify a deep nested environment',
+      name: 'a modified deep nested environment',
       files: [
         {
           status: :modified,
@@ -142,16 +142,14 @@ describe ChefDiff::Changes::Environment do
     }
   ]
 
-  fixtures.each do |fixture|
-    it "handles #{fixture[:name]}" do
-      result = described_class.find(
-        fixture[:files],
-        environments_dir,
-        logger
-      ).map do |change|
-        [change.full_name, change.status]
+  describe '.find' do
+    fixtures.each do |fixture|
+      context "with #{fixture[:name]}" do
+        it 'returns full name and status of its files' do
+          changes = described_class.find(fixture[:files], environments_dir, logger)
+          expect(changes.map { |change| [change.full_name, change.status] }).to eq(fixture[:result])
+        end
       end
-      expect(result).to eq(fixture[:result])
     end
   end
 end

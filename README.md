@@ -2,7 +2,7 @@
 
 ## Intro
 
-Chef Diff is a library for calculating what Chef objects where modified 
+Chef Diff is a library for calculating what Chef objects were modified 
 between two revisions in Chef Git repo. Chef Diff is a derivative/extension 
 of [Between Meals](https://github.com/facebook/between-meals).
 
@@ -47,12 +47,17 @@ Cheff Diff is mainly intended to be used as a gem by other tools but provides a 
 	    -s, --start_ref REF              Git start reference
 	    -e, --end_ref REF                Git end reference (default HEAD)
 
+The logger passed to `Changeset.new` must be `::Logger`-compatible: `info` and
+`debug` are called with a block that builds the message, so the string is only
+made when that level is on. A logger whose `info(msg)` ignores blocks logs
+`nil` instead.
+
 ## SVN support
 
 Chef Diff includes an SVN backend (`ChefDiff::Repo::Svn`) inherited from
 [Between Meals](https://github.com/facebook/between-meals). It is
-**experimental and untested** — there are no specs for it and it has not been
-validated against a real SVN repository. Use at your own risk.
+**experimental** — its specs run against stubbed `svn` commands only, and it
+has not been validated against a real SVN repository. Use at your own risk.
 
 ## Dependencies
 

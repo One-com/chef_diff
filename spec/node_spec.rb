@@ -21,19 +21,19 @@ require 'spec_helper'
 require 'chef_diff/changes/change'
 require 'chef_diff/changes/node'
 describe ChefDiff::Changes::Node do
-  include_context 'silent logger'
+  include_context 'with a silent logger'
   let(:nodes_dir) do
     'nodes'
   end
 
   fixtures = [
     {
-      name: 'empty filelists',
+      name: 'no files',
       files: [],
       result: []
     },
     {
-      name: 'delete node',
+      name: 'a deleted node',
       files: [
         {
           status: :deleted,
@@ -49,7 +49,7 @@ describe ChefDiff::Changes::Node do
       ]
     },
     {
-      name: 'delete nested node',
+      name: 'a deleted nested node',
       files: [
         {
           status: :deleted,
@@ -65,7 +65,7 @@ describe ChefDiff::Changes::Node do
       ]
     },
     {
-      name: 'delete deep nested node',
+      name: 'a deleted deep nested node',
       files: [
         {
           status: :deleted,
@@ -81,7 +81,7 @@ describe ChefDiff::Changes::Node do
       ]
     },
     {
-      name: 'add/modify a node',
+      name: 'a modified node',
       files: [
         {
           status: :modified,
@@ -101,7 +101,7 @@ describe ChefDiff::Changes::Node do
       ]
     },
     {
-      name: 'add/modify a nested node',
+      name: 'a modified nested node',
       files: [
         {
           status: :modified,
@@ -121,7 +121,7 @@ describe ChefDiff::Changes::Node do
       ]
     },
     {
-      name: 'add/modify a deep nested node',
+      name: 'a modified deep nested node',
       files: [
         {
           status: :modified,
@@ -142,16 +142,41 @@ describe ChefDiff::Changes::Node do
     }
   ]
 
-  fixtures.each do |fixture|
-    it "handles #{fixture[:name]}" do
-      result = described_class.find(
-        fixture[:files],
-        nodes_dir,
-        logger
-      ).map do |change|
-        [change.full_name, change.status]
+  describe '.find' do
+    fixtures.each do |fixture|
+      context "with #{fixture[:name]}" do
+        it 'returns full name and status of its files' do
+          changes = described_class.find(fixture[:files], nodes_dir, logger)
+          expect(changes.map { |change| [change.full_name, change.status] }).to eq(fixture[:result])
+        end
       end
-      expect(result).to eq(fixture[:result])
+    end
+  end
+
+  describe '#initialize' do
+    subject(:node) { described_class.new({ path: path, status: :modified }, 'nodes') }
+
+    # Not the silent logger: Logger skips the message block for File::NULL,
+    # so the constructor's debug line would never run.
+    let(:logger) { Logger.new(StringIO.new, level: :debug) }
+
+    before { ChefDiff::Changes::Change.class_variable_set(:@@logger, logger) }
+    after { ChefDiff::Changes::Change.class_variable_set(:@@logger, nil) }
+
+    context 'with a path in the dir' do
+      let(:path) { 'nodes/dc1/s.json' }
+
+      it 'derives path and name without find' do
+        expect(node).to have_attributes(path: 'dc1/', name: 's')
+      end
+    end
+
+    context 'with a path outside the dir' do
+      let(:path) { 'cookbooks/cb/metadata.rb' }
+
+      it 'leaves the name unset' do
+        expect(node.name).to be_nil
+      end
     end
   end
 end

@@ -18,99 +18,68 @@
 # limitations under the License.
 
 # @@logger is shared across the whole Change hierarchy; class instance variables are not inherited by subclasses.
-# rubocop:disable Style/ClassVars
+# rubocop:disable-next Style/ClassVars
 module ChefDiff
   module Changes
     # Changeset aware cookbook
     class Cookbook < Change
       attr_accessor :cookbook_dir
 
-      def self.meaningful_cookbook_file?(path, cookbook_dirs)
-        cookbook_dirs.each do |dir|
-          re = %r{^#{dir}/([^/]+)/.*}
-          m = path.match(re)
-          debug("[cookbook] #{path} meaningful? [#{re}]: #{m}")
-          return true if m
-        end
-        false
+      # <dir>/<cookbook>/<anything> for any dir in cookbook_dirs. Where dirs
+      # overlap, the first in cookbook_dirs wins: the alternation tries them
+      # in order. A file directly in a dir (cookbooks/OWNERS) names nothing.
+      def self.path_regexp(cookbook_dirs)
+        %r{\A(#{Regexp.union(cookbook_dirs).source})/([^/]+)/}
       end
 
-      # Multiple early returns across cookbook_dirs iterations resist clean extraction into a helper.
-      # rubocop:disable Metrics/MethodLength
-      def self.explode_path(path, cookbook_dirs)
-        cookbook_dirs.each do |dir|
-          re = %r{^#{dir}/([^/]+)/.*}
-          debug("[cookbook] Matching #{path} against ^#{re}")
-          m = path.match(re)
-          next unless m
-
-          info("Cookbook is #{m[1]}")
-          return {
-            cookbook_dir: dir,
-            name: m[1]
-          }
-        end
-        nil
+      # { cookbook_dir:, name: }, so name_from_path returns that hash too.
+      def self.parts_from_match(match)
+        match && { cookbook_dir: match[1], name: match[2] }
       end
-      # rubocop:enable Metrics/MethodLength
 
+      # parts is name_from_path's result when the caller has already matched
+      # the files; all files of one cookbook give the same parts. Without
+      # parts, the first file names the cookbook.
       # Length reflects field count plus a single status classification; not accidental complexity.
-      # rubocop:disable Metrics/MethodLength
-      def initialize(files, cookbook_dirs)
+      # rubocop:disable-next Metrics/MethodLength
+      def initialize(files, cookbook_dirs, parts = nil)
         super()
         @files = files
-        exploded_path = self.class.explode_path(
-          files.sample[:path],
-          cookbook_dirs
-        )
-        @name = exploded_path[:name]
-        @cookbook_dir = exploded_path[:cookbook_dir]
+        exploded_path = parts || self.class.name_from_path(files.first[:path], cookbook_dirs)
+        @cookbook_dir, @name = exploded_path.values_at(:cookbook_dir, :name)
 
-        # if metadata.rb is being deleted
-        #   cookbook is marked for deletion
-        # otherwise it was modified
-        #   and will be re-uploaded
-        @status = if files
-                     .select { |x| x[:status] == :deleted }
-                     .map { |x| x[:path].match(%(.*metadata.rb$)) }
-                     .compact
-                     .any?
+        # The cookbook is marked for deletion only when its own top level
+        # metadata.rb is deleted. A nested one, like a fixture cookbook under
+        # test/fixtures/cookbooks/, is an ordinary file of this cookbook.
+        # A git type change (T) shows up as a delete plus a modify of the same
+        # path, and the file is still there, so a modify of metadata.rb wins.
+        # Otherwise the cookbook was modified and will be re-uploaded.
+        metadata = "#{@cookbook_dir}/#{@name}/metadata.rb"
+        statuses = files.select { |x| x[:path] == metadata }.map { |x| x[:status] }
+        @status = if statuses.include?(:deleted) && !statuses.include?(:modified)
                     :deleted
                   else
                     :modified
                   end
       end
-      # rubocop:enable Metrics/MethodLength
 
-      # Single group_by+map pipeline; nested conditions cannot be extracted without inverting data flow.
-      # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
+      # Given a list of changed files, returns one Cookbook per cookbook they
+      # touch, in order of first appearance. Logs one summary line at INFO.
+      # Files are grouped by cookbook dir and name, so the same cookbook in
+      # two dirs is two changes. Files outside any cookbook (OWNERS in a
+      # cookbook dir) fall in the nil group and are dropped. The pattern is
+      # compiled once per call; see Change.find for why.
       def self.find(list, cookbook_dirs, logger)
         @@logger = logger
-        return [] if list.nil? || list.empty?
+        return [] if cookbook_dirs.nil? || list.nil? || list.empty?
 
-        # Single group_by→map pipeline; an intermediate variable adds noise without clarity.
-        # rubocop:disable Style/MultilineBlockChain
-        list
-          .group_by do |x|
-          # Group by prefix of cookbok_dir + cookbook_name
-          # so that we treat deletes and modifications across
-          # two locations separately
-          g = explode_path(x[:path], cookbook_dirs)
-          "#{g[:cookbook_dir]}/#{g[:name]}" if g
-        end
-          .map do |_, change|
-            # Confirm we're dealing with a cookbook
-            # Changes to OWNERS or other stuff that might end up
-            # in [core, other, secure] dirs are ignored
-            is_cookbook = change.any? do |c|
-              meaningful_cookbook_file?(c[:path], cookbook_dirs)
-            end
-            ChefDiff::Changes::Cookbook.new(change, cookbook_dirs) if is_cookbook
-          end.compact
-        # rubocop:enable Style/MultilineBlockChain
+        re = path_regexp(cookbook_dirs)
+        changes = list
+                  .group_by { |file| parts_from_match(re.match(file[:path])) }
+                  .filter_map { |parts, files| new(files, cookbook_dirs, parts) if parts }
+        info { "[#{self}] #{changes.size} matched in #{cookbook_dirs.join(', ')}" }
+        changes
       end
-      # rubocop:enable Metrics/MethodLength, Metrics/CyclomaticComplexity
     end
   end
 end
-# rubocop:enable Style/ClassVars

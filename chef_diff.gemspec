@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = 'chef_diff'
-  s.version = '0.3.0'
+  s.version = '0.4.0'
   s.platform = Gem::Platform::RUBY
   s.summary = 'Chef Diff'
   s.description = 'Library for calculation Chef differences between revisions'
@@ -26,5 +26,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rspec-expectations'
   s.add_development_dependency 'rspec-mocks'
   s.add_development_dependency 'rubocop'
+  s.add_development_dependency 'rubocop-rspec'
   s.add_development_dependency 'simplecov'
 end

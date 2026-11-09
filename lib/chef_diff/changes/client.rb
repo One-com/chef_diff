@@ -21,13 +21,6 @@ module ChefDiff
   module Changes
     # Changeset aware client
     class Client < ChangeSingleFileNested
-      def self.name_from_path(path, client_dir)
-        name_from_path_type(path, client_dir, 'client')
-      end
-
-      def self.find(list, client_dir, logger)
-        find_class(list, client_dir, logger, ChefDiff::Changes::Client)
-      end
     end
   end
 end

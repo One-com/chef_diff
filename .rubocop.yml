@@ -1,3 +1,6 @@
+plugins:
+  - rubocop-rspec
+
 AllCops:
   TargetRubyVersion: 2.7
   NewCops: enable
@@ -18,3 +21,7 @@ Style/ClassVars:
   Exclude:
     - 'spec/**/*'
 
+# Specs are named after the unit (spec/node_spec.rb), not its full path
+# (spec/chef_diff/changes/node_spec.rb). Moving every file buys nothing.
+RSpec/SpecFilePathFormat:
+  Enabled: false

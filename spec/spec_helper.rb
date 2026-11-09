@@ -23,3 +23,10 @@ SimpleCov.start do
 end
 
 Dir[File.expand_path('support/**/*.rb', __dir__)].sort.each { |f| require f }
+
+# Specs build throwaway repositories with real git. Run from a git hook, an
+# inherited GIT_DIR would aim those commands at the project's own repository.
+# With TMPDIR inside a checkout, git would find that checkout above a temp
+# directory that a spec means to be outside any repository.
+ENV.delete_if { |name, _value| name.start_with?('GIT_') }
+ENV['GIT_CEILING_DIRECTORIES'] = Dir.tmpdir

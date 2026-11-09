@@ -21,13 +21,6 @@ module ChefDiff
   module Changes
     # Changeset aware role
     class Role < ChangeSingleFileFlat
-      def self.name_from_path(path, role_dir)
-        name_from_path_type(path, role_dir, 'role')
-      end
-
-      def self.find(list, role_dir, logger)
-        find_class(list, role_dir, logger, ChefDiff::Changes::Role)
-      end
     end
   end
 end

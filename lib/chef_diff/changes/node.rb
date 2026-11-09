@@ -21,13 +21,6 @@ module ChefDiff
   module Changes
     # Changeset aware node
     class Node < ChangeSingleFileNested
-      def self.name_from_path(path, node_dir)
-        name_from_path_type(path, node_dir, 'node')
-      end
-
-      def self.find(list, node_dir, logger)
-        find_class(list, node_dir, logger, ChefDiff::Changes::Node)
-      end
     end
   end
 end
